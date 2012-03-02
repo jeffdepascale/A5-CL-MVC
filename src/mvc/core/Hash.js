@@ -2,7 +2,7 @@
 a5.Package("a5.cl.mvc.core")
 
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class("Hash", 'singleton final', function(self, im){
 	
 		var lastHash,

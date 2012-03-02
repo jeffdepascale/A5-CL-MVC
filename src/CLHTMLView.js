@@ -26,10 +26,11 @@ a5.Package('a5.cl')
 			this._cl_isInDocument = false;
 		};
 		
-		proto.CLHTMLView = function(){
+		proto.CLHTMLView = function(html){
 			proto.superclass(this);
-			
 			this.clickHandlingEnabled(true);
+			if(html !== undefined)
+				this.drawHTML(html);
 		}
 		
 		/**

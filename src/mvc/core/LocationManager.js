@@ -2,7 +2,7 @@
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('LocationManager', 'singleton final', function(self, im){
 	
 		var mappings;
@@ -37,7 +37,7 @@ a5.Package('a5.cl.mvc.core')
 				errorSig.id = [msg, info];
 				self.redirect(errorSig);
 			} else {	
-				self.cl().application()._cl_renderError(type, msg, info);
+				self.MVC().application()._cl_renderError(type, msg, info);
 			}
 		}
 		

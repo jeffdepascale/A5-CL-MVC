@@ -7,7 +7,7 @@
 a5.Package("a5.cl")
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('CLBase')
+	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
 		
 		CLView.customViewDefNodes = ['EventListener', 'Bind'];

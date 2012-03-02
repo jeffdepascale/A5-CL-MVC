@@ -2,7 +2,7 @@
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.core.Instantiator')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class("Mappings", 'singleton final', function(self, im){
 
 		var mappings,
@@ -14,14 +14,6 @@ a5.Package('a5.cl.mvc.core')
 		this.Mappings = function(){
 			self.superclass(this);
 			mappings = errorMappings = [];
-		}
-		
-		this.addConfigMappings = function(){
-			var $mappings = a5.cl._cl_storedCfgs.mappings;
-			if ($mappings) {
-				for (var i = 0, l=$mappings.length; i < l; i++) 
-					self.addMapping($mappings[i], false);
-			}
 		}
 		
 		this.addMapping = function(mappingObj, $append){

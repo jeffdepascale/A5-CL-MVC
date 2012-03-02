@@ -2,7 +2,7 @@ a5.Package('a5.cl.core.viewDef')
 	.Import('a5.cl.*',
 			'a5.cl.mvc.core.XMLUtils',
 			'a5.cl.core.Utils')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Static(function(ViewDefParser, im){
 		ViewDefParser._cl_ns = 'http://corelayerjs.com/';
 		ViewDefParser._cl_nsPrefix = 'cl';

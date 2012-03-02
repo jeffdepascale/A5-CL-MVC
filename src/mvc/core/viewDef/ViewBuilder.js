@@ -2,7 +2,7 @@ a5.Package('a5.cl.core.viewDef')
 	.Import('a5.cl.mvc.core.XMLUtils',
 			'a5.cl.core.Utils',
 			'a5.cl.CLView')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Static(function(ViewBuilder, im){
 		ViewBuilder._cl_isInternalNodeType = function(node){
 			var internalNodes = ['Imports', 'Defaults', 'Definition', 'Environment', 'Platform', 'Orientation'];

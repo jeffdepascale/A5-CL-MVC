@@ -1,3 +1,4 @@
+src/CLMVCBase.js
 src/mvc/CLViewContainerEvent.js
 src/mvc/core/RedrawEngine.js
 src/mvc/core/AppSetup.js
@@ -13,6 +14,7 @@ src/mvc/core/viewDef/ViewBuilder.js
 src/mvc/core/Filters.js
 src/mvc/core/Mappings.js
 src/mvc/core/GarbageCollector.js
+src/mvc/mixins/CSS3Props.js
 src/CLHTMLView.js
 src/CLViewContainer.js
 src/CLWindow.js

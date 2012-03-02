@@ -2,19 +2,20 @@
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('EnvManager', function(cls, im){
 		
 		var _scrollBarWidth,
 			_windowProps = {},
-			_forcedClientEnvironment;
+			_forcedClientEnvironment,
+			_clientEnvironment;
 		
 		cls.EnvManager = function(){
 			cls.superclass(this);
 			getScrollBarWidth();
 			cls.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, updateResize);
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
-			_forcedClientEnvironment = cls.cl().clientEnvironment();
+			_forcedClientEnvironment = _clientEnvironment = cls.cl().clientEnvironment();
 			updateResize();
 		}	
 		

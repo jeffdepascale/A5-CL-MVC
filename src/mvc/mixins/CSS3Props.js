@@ -1,6 +1,6 @@
 
 
-a5.Package('a5.cl.mixins')
+a5.Package('a5.cl.mvc.mixins')
 
 	.Mixin('CSS3Props', function(mixin){
 	

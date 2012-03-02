@@ -2,7 +2,7 @@
 a5.Package("a5.cl.mvc.core")
 
 
-	.Extends("a5.cl.CLBase")
+	.Extends("a5.cl.CLMVCBase")
 	.Class("Filters", 'singleton final', function(self){
 		
 		var filters;
@@ -10,10 +10,6 @@ a5.Package("a5.cl.mvc.core")
 		this.Filters = function(){
 			self.superclass(this);
 			filters = [];
-			var $filters = a5.cl._cl_storedCfgs.filters;
-			if($filters) 
-				for (var i = 0, l=$filters.length; i<l; i++) 
-					self.addFilter($filters[i], true);
 		}
 		
 		

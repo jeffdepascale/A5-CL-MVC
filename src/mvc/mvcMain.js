@@ -18,6 +18,11 @@ a5.Package('a5.cl.mvc')
 		
 		cls.MVC = function(){
 			cls.superclass(this);
+			cls.configDefaults({
+				rootController: null,
+				rootViewDef: null,
+				rootWindow:null
+			});
 		}
 		
 		this.rootController = function(){
@@ -78,10 +83,10 @@ a5.Package('a5.cl.mvc')
 			return _application.renderTarget();
 		}
 		
-		cls.initializePlugin = function(){
-			var params = cls.getCreateParams();
-			if (cls.config().application) {
-				_application = cls.create(params.application);
+		cls.Override.initializePlugin = function(){
+			var appCls = a5.GetNamespace(cls.cl().applicationPackage(true) + '.Application');
+			if (appCls) {
+				_application = cls.create(appCls);
 				if(!_application instanceof a5.cl.CLApplication) throw 'Error: application must extend a5.cl.CLApplication.';
 			} else {
 				_application = cls.create(a5.cl.CLApplication);
@@ -103,6 +108,21 @@ a5.Package('a5.cl.mvc')
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
 			a5.cl.core.Utils.purgeBody();
 			cls.application().view().draw();
+			cls.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, eInstantiateCompleteHandler);
+			cls.createMainConfigMethod('filters');
+			cls.createMainConfigMethod('mappings');
+		}
+		
+		var eInstantiateCompleteHandler = function(){
+			var $filters = cls.getMainConfigProps('filters');
+			if($filters) 
+				for (var i = 0, l=$filters[0].length; i<l; i++) 
+					_filters.addFilter($filters[0][i], true);
+			var $mappings = cls.getMainConfigProps('mappings');
+			if ($mappings) {
+				for (var i = 0, l=$mappings[0].length; i < l; i++) 
+					_mappings.addMapping($mappings[0][i], false);
+			}
 		}
 		
 		/**
@@ -133,7 +153,6 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		var dependenciesLoaded = function(){
-			_mappings.addConfigMappings();
 			_envManager.windowProps(true);
 		}
 		
@@ -173,12 +192,14 @@ a5.Package('a5.cl.mvc')
 			_locationManager.processMapping(e.data().hashArray);
 		}
 		
-		cls.initializeAddOn = function(){
-			var resourceCache = a5.cl.core.ResourceCache.instance();
+		cls.Override.initializeAddOn = function(){
+			var resourceCache = a5.cl.core.ResourceCache.instance(),
+				isAsync = false,
+				cfg = cls.pluginConfig();
 			
 			var generateWindow = function(){
-				if (cls.config().rootWindow) {
-					var nm = applicationPackage + '.views.' + cls.config().rootWindow;
+				if (cfg.rootWindow) {
+					var nm = applicationPackage + '.views.' + cfg.rootWindow;
 					if (a5.GetNamespace(nm)) {
 						windowSourceLoaded(nm);
 					} else {
@@ -207,15 +228,15 @@ a5.Package('a5.cl.mvc')
 				cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
-			if (cls.config().rootController) {
-				controller = cls.cl()._core().instantiator().createClassInstance(cls.config().rootController, 'Controller');
+			if (cfg.rootController) {
+				controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
-					cls.redirect(500, 'Invalid rootController specified, "' + cls.config().rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
+					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
 					return;
 				}
 				controllerNS = controller.namespace();
 			} else {
-				a5.Package('a5.cl.core')
+				a5.Package('a5.cl.mvc.core')
 					.Extends('a5.cl.CLController')
 					.Class('RootController', function(cls){ 
 
@@ -227,17 +248,18 @@ a5.Package('a5.cl.mvc')
 							cls.redirect(500, "No mapping created for default '/' mapping.")
 						}
 				});
-				controller = cls.create('a5.cl.core.RootController');	
-				controllerNS = 'a5.cl.core.RootController';
+				controller = cls.create('a5.cl.mvc.core.RootController');	
+				controllerNS = 'a5.cl.mvc.core.RootController';
 			}
 			cls.addMapping({desc:'/', controller:controllerNS}, true);
-			if (cls.config().rootViewDef) {
-				controller.defaultViewDefinition(cls.config().rootViewDef);
+			if (cfg.rootViewDef) {
+				controller.defaultViewDefinition(cfg.rootViewDef);
+				isAsync = true;
 				controller.generateView(function(view){
 					_window = view;
 					windowViewLoaded();
 				});
 			} else generateWindow();
-			return true;
+			return isAsync;
 		}
 })

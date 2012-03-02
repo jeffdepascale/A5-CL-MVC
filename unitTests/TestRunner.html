@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<script type="text/javascript" >
 //A5, Copyright (c) 2011, Jeff dePascale & Brian Sutliffe. http://www.jeffdepascale.com
 (function( window, undefined ) {//A5, Copyright (c) 2011, Jeff dePascale & Brian Sutliffe. http://www.jeffdepascale.com
 (function( window, undefined ) {(function(){
@@ -588,7 +593,9 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					extender.prototype = proxy;
 					proxy = null;	
 				} else
-					extender.prototype = new base();			
+					extender.prototype = new base();
+				if(base.namespace && base.isSingleton())
+					isSingleton = true;				
 				superclass = base;
 			} else
 				return a5.ThrowError('Cannot extend ' + base.namespace() + ', class marked as final.');
@@ -736,9 +743,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			} else
 				a5.ThrowError(205, null, {nm:obj.namespace()});
 			delete obj._mixinDef.Properties;
-			delete obj._mixinDef.Contract;
 			delete obj._mixinDef.MustExtend;
-			delete obj._mixinDef.MustMix;
 		}
 		if (!fromQueue) processQueue();
 	},
@@ -1382,9 +1387,7 @@ a5.SetNamespace('a5.core.mixins', {
 			i, l, mixin;
 			
 		for (i = 0, l = mixins.length; i < l; i++) {
-			mixin = a5.GetNamespace(mixins[i], typeof imports === 'function' ? imports() : imports);
-			if(!mixin)
-				return a5.ThrowError(404, null, {mixin:mixins[i]});
+			mixin = a5.GetNamespace(mixins[i], imports());
 			mixinInsts.push(mixin);
 			for (i = 0; i < sourceObj.constructor._mixinRef.length; i++)
 				if (sourceObj.constructor._mixinRef[i] === mixin)
@@ -2230,7 +2233,6 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	401:'Mixin "{nm}" requires owner class to mix "{cls}".',
 	402:'Mixin "{nm}" already mixed into ancestor chain.',
 	403:'Invalid mixin: Method "{method}" defined by more than one specified mixin.',
-	404:'Invalid mixin: Mixin "{mixin}" does not exist.',
 	
 	//600: Contract
 	601:'Invalid implementation of Contract on interace {intNM} in class {implNM} for method {method}.'
@@ -2356,6 +2358,16 @@ a5.Package('a5.cl')
 		}
 		
 		/**
+		 * Returns the name value of the class if known, else it returns the instanceUID value.
+		 * @name mvcName
+		 * @type String
+		 */
+		proto.mvcName = function(){
+			return this._cl_mvcName || this.instanceUID();
+		}
+		
+		
+		/**
 		 * @name cl
 		 * @return
 		 * @type a5.cl.MVC#
@@ -2395,6 +2407,32 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
+		/**
+		 * The redirect method throws a control change to A5 CL.
+		 * @name redirect
+		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
+		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
+		 * @param {String} [param.url] A string value to pass as a location redirect. 
+		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
+		 * @param {String} [param.action] A string value of the name of the method action to call. 
+		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
+		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
+		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
+		 */
+		proto.redirect = function(params, info, forceRedirect){
+			if(this.cl()._core().locationManager()){
+				return this.cl()._core().locationManager().redirect(params, info, forceRedirect);
+			} else {
+				if(params === 500){
+					var isError = info instanceof a5.Error;
+					if(isError && !info.isWindowError())
+						this.throwError(info);
+					else
+						throw info;
+				}
+			}
+		}
+		
 		proto.Override.throwError = function(error){
 			proto.superclass().throwError(error, a5.cl.CLError);
 		}
@@ -2420,6 +2458,10 @@ a5.Package('a5.cl')
 		 */
 		proto.appParams = function(){
 			return this.cl().appParams();
+		}
+		
+		proto._cl_setMVCName = function(name){
+			this._cl_mvcName = name;
 		}
 });
 
@@ -2458,7 +2500,7 @@ a5.Package('a5.cl')
 		proto.CLWorker = function(isWorker){
 			proto.superclass(this);
 			if(this.isSingleton())
-				this.throwError("Workers cannot be singletons.");
+				this.redirect(500, "Workers cannot be singletons.");
 			this._cl_communicator = null;
 			this._cl_JSON = a5.cl.core.JSON || JSON;
 			this._cl_isWorker = (isWorker === '_cl_isWorkerInitializer');
@@ -2493,7 +2535,7 @@ a5.Package('a5.cl')
 					if (obj.log) {
 						self.log(obj.log);
 					} else if (obj.error) {
-						self.throwError(obj.error);
+						self.redirect(500, obj.error);
 					} else {
 						var method = null;
 						try {
@@ -2537,7 +2579,7 @@ a5.Package('a5.cl')
 					data: data
 				});
 			} else {
-				self.throwError('Cannot call createWorker from worker methods.');
+				self.redirect(500, 'Cannot call createWorker from worker methods.');
 			}
 		}
 		
@@ -2893,6 +2935,9 @@ a5.Package('a5.cl.core')
 				plugins[i].initializePlugin();
 					
 			}
+			a5.cl.PluginConfig = function(){
+				self.throwError(self.create(a5.cl.CLError, ['Invalid call to MVC pluginConfig method: method must be called prior to plugin load.']));
+			}
 		}
 		
 		this.defineRegisterableProcess = function(process){
@@ -2916,7 +2961,7 @@ a5.Package('a5.cl.core')
 		this.processAddons = function(callback){
 			var count = 0,
 			processAddon = function(){
-				if (count >= addOns.length) {
+				if (count >= addOns.length - 1) {
 					callback();
 				} else {
 					var addOn = addOns[count].instance(),
@@ -3188,12 +3233,14 @@ a5.Package('a5.cl.core')
 		this.Override.getClassInstance = function(type, className, instantiate){
 			var instance = null,
 			namespace = null;
-			if(className.indexOf('.') !== -1)
-				namespace = a5.GetNamespace(className);
-			else 
-				namespace = getClassNamespace(type, className);
-			if(namespace)
-				instance = namespace.instance(!!instantiate);
+			try{
+				if(className.indexOf('.') !== -1)
+					namespace = a5.GetNamespace(className);
+				else 
+					namespace = getClassNamespace(type, className);
+				if(namespace)
+					instance = namespace.instance(!!instantiate);
+			}catch(e){}
 			return instance;
 		}
 		
@@ -5509,7 +5556,7 @@ a5.Package('a5.cl')
 						pkg = pkg + '.' + this.constructor.className();
 			for (var prop in cfg){
 				var pluginCfg = cfg[prop];
-				 if(pluginCfg.nm && (pluginCfg.nm === pkg || pluginCfg.nm === this.constructor.className()))
+				 if(pluginCfg.nm && pluginCfg.nm == pkg)
 				 	return pluginCfg.obj;
 			}
 			return {};
@@ -5752,7 +5799,6 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
-			proto.cl().addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, this.pluginsLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
@@ -5777,10 +5823,6 @@ a5.Package('a5.cl')
 		 */
 		proto.setPluginConfig = function(namespace, obj){ CLMain._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
 		
-		/**
-		 * 
-		 */
-		proto.pluginsLoaded = function(){}
 		/**
 		 * @name onlineStatusChanged
 		 * @description Called by the framework when the browser's online status has changed. This is equivalent to listening for {@link a5.cl.MVC.event:ONLINE_STATUS_CHANGE}.
@@ -5831,3 +5873,373 @@ a5.Package('a5.cl')
 
 
 })(this);
+
+
+a5.Package('a5.cl')
+	
+	.Extends('a5.cl.CLBase')
+	.Static(function(CLUnitTest){
+		
+		CLUnitTest.COMPLETE = 'a5_cl_testing_complete';
+		
+		CLUnitTest._cl_testRef = null;
+		
+		CLUnitTest.testingRef = function(){
+			return CLUnitTest._cl_testRef || a5.cl.testing.Testing();
+		}
+		
+	})
+	.Prototype('CLUnitTest', 'singleton', function(proto, im, CLUnitTest){
+		
+		this.Properties(function(){
+			this._cl_async = false;
+		})
+		
+		proto.CLUnitTest = function(){
+			proto.superclass(this);
+		}
+		
+		proto.asyncTest = function(){
+			this._cl_async = true;
+		}
+		
+		proto.runTest = function(){
+			if(this.runTest === proto.runTest)
+				this.error('runTest method not implemented on CLUnitTest class ' + this.namespace());
+		}
+		
+		proto.Override.assert = function(check, response){
+			proto.superclass().assert.call(this, check, this.className() + " Assertion Failure: " + response)
+		}
+		
+		proto.testComplete = function(){
+			if(this._cl_async == true)
+				this.dispatchEvent(CLUnitTest.COMPLETE);
+		}
+		
+		proto.Override.log = function(value){
+			CLUnitTest.testingRef().log(value);
+		}
+		
+		proto.Override.warn = function(value){
+			CLUnitTest.testingRef().warn(value);
+		}
+		
+		proto.error = function(value){
+			CLUnitTest.testingRef().fail(value);
+		}
+		
+		proto.fail = function(value){
+			CLUnitTest.testingRef().fail(value);
+		}
+
+});
+
+
+a5.Package('a5.cl.testing')
+	
+	.Interface('IResultService', function(cls){
+		
+		cls.sendResults = function(){}
+		
+});
+
+a5.Package('a5.cl.testing.core')
+
+	.Extends('a5.cl.CLBase')
+	.Class('TestFrame', function(cls, im){
+		
+		var testRef,
+			iframe,
+			doc;
+		
+		cls.TestFrame = function($testRef, url){
+			cls.superclass(this);
+			testRef = $testRef;
+			iframe = document.createElement('iframe');
+			iframe.frameBorder = 0;
+			iframe.style.width = iframe.style.height = '0px';
+			iframe.src = url;
+			this.cl().addEventListener(a5.cl.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkFrameDOM, false, this);
+			document.body.appendChild(iframe);
+		}	
+		
+		cls.getA5 = function(){
+			return frameEval('a5');
+		}
+		
+		cls.context = function(){
+			return iframe.contentWindow.window;
+		}
+		
+		var frameEval = function(str){
+			iframe.contentWindow.focus();
+			return iframe.contentWindow.eval(str);
+		}
+		
+		var checkFrameDOM = function(){
+			var isReady = false;
+			try{
+				if(frameEval('"a5" in window') && frameEval('a5.cl') !== undefined)
+					isReady = true;
+			} catch(e){}
+			if(isReady){
+				this.cl().removeEventListener(a5.cl.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkFrameDOM);
+				this.dispatchEvent('READY');
+			}	
+				
+		}
+		
+})
+
+
+a5.Package('a5.cl.testing')
+	
+	.Import('a5.cl.CLUnitTest')	
+	.Extends('a5.cl.CLAddon')
+	.Class('Testing', function(self, im, Testing){
+		
+		var testCount,
+			totalTests,
+			testRef = [],
+			resultArray = [],
+			consoleWindow,
+			testFrame,
+			lastTestStart,
+			fullTestStart,
+			suiteFail = false,
+			didFail = false,
+			runningTest,
+			interceptCallback,
+			didRun = false;
+			
+		self.Testing = function(){
+			self.superclass(this);
+			self.registerForProcess('logger');
+			self.registerForProcess('launchInterceptor');
+			this.configDefaults({
+				runTests:false,
+				resultCallback:null,
+				logResult:true,
+				iframeURL:null,
+				showConsole:false,
+				runThirdPartyTests:false,
+				restrictEnvironments:null,
+				resultService:null,
+				launchAfterTest:false
+			})
+		}
+		
+		self.Override.initializePlugin = function(){
+			if (self.pluginConfig().resultService) {
+				var svc = a5.GetNamespace(self.pluginConfig().resultService);
+				if (!svc || svc && !svc instanceof a5.cl.CLAjax || !svc.doesImplement('a5.cl.testing.IResultService')) {
+					self.throwError('resultService property on add-on Testing must implement a5.cl.testing.IResultService.');
+					self.pluginConfig().resultService = null;
+					return;
+				}
+			}
+			if(self.pluginConfig().iframeURL){
+				testFrame = self.create(a5.cl.testing.core.TestFrame, [this, self.pluginConfig().iframeURL]);
+				testFrame.addEventListener('READY', function(){
+					prepComplete();
+				})
+			} else {
+				if(a5.GetNamespace(a5.cl.ui) && self.pluginConfig().showConsole === true){
+					consoleWindow = self.create(a5.cl.testing.core.TestingConsole, [this]);
+					self.create('a5.cl.testing.ErrorHandler', [consoleWindow]);
+					self.cl().MVC().addMapping({desc:500, controller:'a5.cl.testing.ErrorHandler', action:'_500'});
+					self.cl().MVC().addMapping({desc:404, controller:'a5.cl.testing.ErrorHandler', action:'_404'});
+					self.cl().MVC().application().addWindow(consoleWindow);
+				}
+				prepComplete();
+			}
+		}
+		
+		var prepComplete = function(){
+			if(self.pluginConfig().runTests === true)
+				self.startTests();
+		}
+		
+		self.interceptLaunch = function(callback){
+			interceptCallback = callback;
+			return true;
+		}	
+		
+		self.Override.log = function(value){
+			showStatus('log', value);
+		}
+		
+		self.error = function(value){
+			showStatus('error', value);
+		}
+		self.fail = function(value){
+			didFail = true;
+			suiteFail = true;
+			showStatus('fail', value);
+			eTestCompleteHandler();
+		}
+		
+		self.Override.warn = function(value){
+			showStatus('warn', value);
+		}
+		
+		self.startTests = function(){	
+			if (!didRun && validateEnvironment()) {
+				didRun = true;
+				fullTestStart = new Date();
+				var appReady = 	function(){
+					var a5ctx = a5;
+					if (testFrame) {
+						a5ctx = testFrame.context().a5;
+						a5ctx.cl.CLUnitTest._cl_testRef = self;
+					}
+					var app = testFrame ? a5ctx.cl.instance().applicationPackage() : self.cl().applicationPackage(),
+						pkg = app['tests'];
+					
+					for(var i = 0, l =a5ctx.cl.CLUnitTest._extenderRef.length; i<l; i++){
+						var clsRef = a5ctx.cl.CLUnitTest._extenderRef[i];
+						if(clsRef.classPackage(true) === pkg)
+							testRef.push(clsRef);
+						else if (self.pluginConfig().runThirdPartyTests === true)
+							testRef.push(clsRef);
+					}		
+
+					totalTests = testRef.length;
+					testCount = 0;
+					resultArray = [];
+					if (totalTests === 0) {
+						self.error('No valid tests present in application.');
+						testComplete();
+					} else {
+						triggerNextTest();
+					}
+				}
+
+				var checkLoadStatus = function(app){
+					state = app.launchState();
+					if (app.launchState() > a5.cl.CLLaunchState.PLUGINS_LOADED) {
+						appReady();
+					} else {
+						app.addOneTimeEventListener(testFrame.context().a5.cl.CLEvent.PLUGINS_LOADED, function(){
+							appReady();
+						})
+					}
+				}
+
+
+				if (testFrame) {
+					var app = testFrame.context().a5.cl.instance();
+					if (app) {
+						checkLoadStatus(app);
+					} else {
+						testFrame.context().a5.cl.CreateCallback(function(app){
+							checkLoadStatus(app);
+						})
+					} 
+				} else {
+					appReady();
+				}
+				
+			}
+		}
+		
+		var showStatus = function(type, value){
+			resultArray.push(type + ': ' + value);
+			if(consoleWindow)
+				consoleWindow.showStatus(type, value);
+			else if(window.console !== undefined)
+				console.log(value);
+			if (!a5.GetNamespace(a5.cl.mvc)) {
+				var elem = document.createElement('div');
+				elem.innerHTML = type + ': ' + value;
+				if(type === 'error' || type === 'fail')
+					elem.style.color = 'red';
+				document.body.appendChild(elem);
+				elem = null;
+			}
+		}
+		
+		var triggerNextTest = function(){
+			if (testCount === totalTests) {
+				testComplete();
+			} else {
+				didFail = false;
+				var testCls = testRef[testCount],
+					ctx = testFrame ? testFrame.context().a5.cl.instance() : self,
+					async;
+				runningTest = ctx.create(testCls.namespace());
+				async = runningTest._cl_async;
+				if(async === true)
+					runningTest.addEventListener(im.CLUnitTest.COMPLETE, eTestCompleteHandler);
+				testCount++;
+				lastTestStart = new Date();
+				try {
+					runningTest.runTest();
+				} catch(e){
+					runningTest.error(e);
+				}
+				if(!async)
+					eTestCompleteHandler();
+			}
+		}
+		
+		var eTestCompleteHandler = function(e){
+			var time = new Date() - lastTestStart;
+			lastTestStart = null;
+			if(!didFail)
+				self.log('Test "' + runningTest.className() + '" completed successfully in ' + time + ' ms.');
+			runningTest.removeEventListener(im.CLUnitTest.COMPLETE, eTestCompleteHandler);
+			runningTest.destroy();
+			triggerNextTest();
+		}
+		
+		var validateEnvironment = function(){
+			if(self.pluginConfig().restrictEnvironments === null){
+				return true;
+			} else {
+				var envs = self.pluginConfig().restrictEnvironments.split('|');
+				for(var i = 0, l = envs.length; i<l; i++)
+					if(envs[i] === self.cl().environment())
+						return true;
+				return false;
+			}
+		}
+		
+		var testComplete = function(){
+			runningTest = null;
+			var totalTime = new Date() - fullTestStart;
+			fullTestStart = null;
+			self.log('Test run completed' + (suiteFail ? ' with failures':'') + ' in ' + totalTime + ' ms.');
+			if (self.pluginConfig().resultCallback && typeof self.pluginConfig().resultCallback === 'function') 
+				self.pluginConfig().resultCallback(results);
+			if (self.pluginConfig().resultService) 
+				sendResultsViaService();
+			if(self.pluginConfig().launchAfterTest === true)
+				interceptCallback();
+		}
+		
+		var sendResultsViaService = function(){
+			var svc = self.create(self.pluginConfig().resultService);
+			svc.sendResults(resultArray);
+		}
+});
+
+a5.Package('a5.unitTest')
+
+.Extends('a5.cl.CLMain')
+.Class('Main', function(cls){
+
+cls.Main = function(){
+cls.superclass(this);
+cls.setPluginConfig('a5.cl.testing.Testing', {
+runTests:true,
+iframeURL:a5.cl.core.Utils.getParameterByName('testURL') || 'index.html'
+});
+}
+});
+
+a5.cl.CreateApplication();
+</script><body>
+	</body>
+</html>

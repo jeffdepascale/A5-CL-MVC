@@ -1,6 +1,6 @@
 a5.Package('a5.cl.mvc.core')
 
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('GarbageCollector', 'singleton final', function(self, im){
 
 		var recycleBin = document.createElement('div'),

@@ -7,7 +7,7 @@
  */
 a5.Package('a5.cl')
 	.Import('a5.cl.core.viewDef.ViewDefParser')
-	.Extends('CLBase')
+	.Extends('CLMVCBase')
 	.Prototype('CLController', function(proto, im, CLController){
 		
 		this.Properties(function(){
@@ -164,7 +164,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_renderComplete = function(callback){
 			if(this._cl_mappable)
-				this.cl().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
+				this.MVC().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
 			if(callback)
 				callback.call(this);
 		}

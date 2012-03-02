@@ -1,5 +1,57 @@
 //A5, Copyright (c) 2011, Jeff dePascale & Brian Sutliffe. http://www.jeffdepascale.com
 (function( a5, undefined ) {
+a5.Package('a5.cl')
+
+	.Extends('a5.cl.CLBase')
+	.Prototype('CLMVCBase', function(proto){
+		
+		proto.CLMVCBase = function(){
+			proto.superclass(this);
+		}
+		
+		/**
+		 * Returns the name value of the class if known, else it returns the instanceUID value.
+		 * @name mvcName
+		 * @type String
+		 */
+		proto.mvcName = function(){
+			return this._cl_mvcName || this.instanceUID();
+		}
+		
+		/**
+		 * The redirect method throws a control change to A5 CL.
+		 * @name redirect
+		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
+		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
+		 * @param {String} [param.url] A string value to pass as a location redirect. 
+		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
+		 * @param {String} [param.action] A string value of the name of the method action to call. 
+		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
+		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
+		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
+		 */
+		proto.redirect = function(params, info, forceRedirect){
+			if(this.MVC().locationManager()){
+				return this.MVC().locationManager().redirect(params, info, forceRedirect);
+			} else {
+				if(params === 500){
+					var isError = info instanceof a5.Error;
+					if(isError && !info.isWindowError())
+						this.throwError(info);
+					else
+						throw info;
+				}
+			}
+		}
+		
+		proto._cl_setMVCName = function(name){
+			this._cl_mvcName = name;
+		}
+		
+})
+
+
+
 /**
  * @class 
  * @name a5.cl.mvc.CLViewContainerEvent
@@ -61,7 +113,7 @@ a5.Package('a5.cl.mvc')
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('RedrawEngine', 'singleton final', function(self, im){
 
 		var appContainer, 
@@ -194,7 +246,7 @@ a5.SetNamespace('a5.cl.mvc.core.AppSetup', {
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('LocationManager', 'singleton final', function(self, im){
 	
 		var mappings;
@@ -229,7 +281,7 @@ a5.Package('a5.cl.mvc.core')
 				errorSig.id = [msg, info];
 				self.redirect(errorSig);
 			} else {	
-				self.cl().application()._cl_renderError(type, msg, info);
+				self.MVC().application()._cl_renderError(type, msg, info);
 			}
 		}
 		
@@ -291,7 +343,7 @@ a5.Package('a5.cl.mvc.core')
 a5.Package("a5.cl.mvc.core")
 
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class("Hash", 'singleton final', function(self, im){
 	
 		var lastHash,
@@ -637,7 +689,7 @@ a5.Package('a5.cl.mvc.core')
 a5.Package("a5.cl")
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('CLBase')
+	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
 		
 		CLView.customViewDefNodes = ['EventListener', 'Bind'];
@@ -1738,19 +1790,20 @@ a5.Package("a5.cl")
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('EnvManager', function(cls, im){
 		
 		var _scrollBarWidth,
 			_windowProps = {},
-			_forcedClientEnvironment;
+			_forcedClientEnvironment,
+			_clientEnvironment;
 		
 		cls.EnvManager = function(){
 			cls.superclass(this);
 			getScrollBarWidth();
 			cls.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, updateResize);
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
-			_forcedClientEnvironment = cls.cl().clientEnvironment();
+			_forcedClientEnvironment = _clientEnvironment = cls.cl().clientEnvironment();
 			updateResize();
 		}	
 		
@@ -1905,7 +1958,7 @@ a5.Package('a5.cl.core.viewDef')
 	.Import('a5.cl.*',
 			'a5.cl.mvc.core.XMLUtils',
 			'a5.cl.core.Utils')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Static(function(ViewDefParser, im){
 		ViewDefParser._cl_ns = 'http://corelayerjs.com/';
 		ViewDefParser._cl_nsPrefix = 'cl';
@@ -2104,7 +2157,7 @@ a5.Package('a5.cl.core.viewDef')
 	.Import('a5.cl.mvc.core.XMLUtils',
 			'a5.cl.core.Utils',
 			'a5.cl.CLView')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Static(function(ViewBuilder, im){
 		ViewBuilder._cl_isInternalNodeType = function(node){
 			var internalNodes = ['Imports', 'Defaults', 'Definition', 'Environment', 'Platform', 'Orientation'];
@@ -2475,7 +2528,7 @@ a5.Package('a5.cl.core.viewDef')
 a5.Package("a5.cl.mvc.core")
 
 
-	.Extends("a5.cl.CLBase")
+	.Extends("a5.cl.CLMVCBase")
 	.Class("Filters", 'singleton final', function(self){
 		
 		var filters;
@@ -2483,10 +2536,6 @@ a5.Package("a5.cl.mvc.core")
 		this.Filters = function(){
 			self.superclass(this);
 			filters = [];
-			var $filters = a5.cl._cl_storedCfgs.filters;
-			if($filters) 
-				for (var i = 0, l=$filters.length; i<l; i++) 
-					self.addFilter($filters[i], true);
 		}
 		
 		
@@ -2588,7 +2637,7 @@ a5.Package("a5.cl.mvc.core")
 a5.Package('a5.cl.mvc.core')
 	
 	.Import('a5.cl.core.Instantiator')
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class("Mappings", 'singleton final', function(self, im){
 
 		var mappings,
@@ -2600,14 +2649,6 @@ a5.Package('a5.cl.mvc.core')
 		this.Mappings = function(){
 			self.superclass(this);
 			mappings = errorMappings = [];
-		}
-		
-		this.addConfigMappings = function(){
-			var $mappings = a5.cl._cl_storedCfgs.mappings;
-			if ($mappings) {
-				for (var i = 0, l=$mappings.length; i < l; i++) 
-					self.addMapping($mappings[i], false);
-			}
 		}
 		
 		this.addMapping = function(mappingObj, $append){
@@ -2737,7 +2778,7 @@ a5.Package('a5.cl.mvc.core')
 
 a5.Package('a5.cl.mvc.core')
 
-	.Extends('a5.cl.CLBase')
+	.Extends('a5.cl.CLMVCBase')
 	.Class('GarbageCollector', 'singleton final', function(self, im){
 
 		var recycleBin = document.createElement('div'),
@@ -2772,6 +2813,43 @@ a5.Package('a5.cl.mvc.core')
 
 
 
+
+a5.Package('a5.cl.mvc.mixins')
+
+	.Mixin('CSS3Props', function(mixin){
+	
+		mixin.MustExtend('a5.cl.CLView');
+		
+		mixin.CSS3Props = function(){
+		}
+		
+		mixin._cl_processCSS3Prop = function(prop, check, value){
+			if(value === true)
+				return a5.cl.core.Utils.getCSSProp(prop) !== null;
+			return this._cl_css(prop, value, true);
+		}
+		
+		/**
+		 * @name rotation
+		 * @param {Object} value
+		 */
+		mixin.rotation = function(value){
+			return this._cl_processCSS3Prop('transform', (value === true), 'rotate(' + value + 'deg)', true);
+		}	
+		
+		mixin.maskImage = function(value){
+			return this._cl_processCSS3Prop('maskImage', (value === true), 'url(' + value + ')', true);
+		}
+		
+		mixin.shadow = function(value){
+			return this._cl_processCSS3Prop('boxShadow', (value === true), value, true);
+		}
+		
+		
+})
+
+
+
 /**
  * @class Implements a view with a direct html draw area.
  * @name a5.cl.CLHTMLView
@@ -2799,10 +2877,11 @@ a5.Package('a5.cl')
 			this._cl_isInDocument = false;
 		};
 		
-		proto.CLHTMLView = function(){
+		proto.CLHTMLView = function(html){
 			proto.superclass(this);
-			
 			this.clickHandlingEnabled(true);
+			if(html !== undefined)
+				this.drawHTML(html);
 		}
 		
 		/**
@@ -3090,6 +3169,7 @@ a5.Package('a5.cl')
 			this._cl_viewElement.onclick  = null;
 		}
 });
+
 
 
 /**
@@ -3946,7 +4026,7 @@ a5.Package('a5.cl')
  */
 a5.Package('a5.cl')
 	.Import('a5.cl.core.viewDef.ViewDefParser')
-	.Extends('CLBase')
+	.Extends('CLMVCBase')
 	.Prototype('CLController', function(proto, im, CLController){
 		
 		this.Properties(function(){
@@ -4103,7 +4183,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_renderComplete = function(callback){
 			if(this._cl_mappable)
-				this.cl().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
+				this.MVC().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
 			if(callback)
 				callback.call(this);
 		}
@@ -4504,6 +4584,11 @@ a5.Package('a5.cl.mvc')
 		
 		cls.MVC = function(){
 			cls.superclass(this);
+			cls.configDefaults({
+				rootController: null,
+				rootViewDef: null,
+				rootWindow:null
+			});
 		}
 		
 		this.rootController = function(){
@@ -4564,10 +4649,10 @@ a5.Package('a5.cl.mvc')
 			return _application.renderTarget();
 		}
 		
-		cls.initializePlugin = function(){
-			var params = cls.getCreateParams();
-			if (cls.config().application) {
-				_application = cls.create(params.application);
+		cls.Override.initializePlugin = function(){
+			var appCls = a5.GetNamespace(cls.cl().applicationPackage(true) + '.Application');
+			if (appCls) {
+				_application = cls.create(appCls);
 				if(!_application instanceof a5.cl.CLApplication) throw 'Error: application must extend a5.cl.CLApplication.';
 			} else {
 				_application = cls.create(a5.cl.CLApplication);
@@ -4589,6 +4674,21 @@ a5.Package('a5.cl.mvc')
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
 			a5.cl.core.Utils.purgeBody();
 			cls.application().view().draw();
+			cls.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, eInstantiateCompleteHandler);
+			cls.createMainConfigMethod('filters');
+			cls.createMainConfigMethod('mappings');
+		}
+		
+		var eInstantiateCompleteHandler = function(){
+			var $filters = cls.getMainConfigProps('filters');
+			if($filters) 
+				for (var i = 0, l=$filters[0].length; i<l; i++) 
+					_filters.addFilter($filters[0][i], true);
+			var $mappings = cls.getMainConfigProps('mappings');
+			if ($mappings) {
+				for (var i = 0, l=$mappings[0].length; i < l; i++) 
+					_mappings.addMapping($mappings[0][i], false);
+			}
 		}
 		
 		/**
@@ -4619,7 +4719,6 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		var dependenciesLoaded = function(){
-			_mappings.addConfigMappings();
 			_envManager.windowProps(true);
 		}
 		
@@ -4659,12 +4758,14 @@ a5.Package('a5.cl.mvc')
 			_locationManager.processMapping(e.data().hashArray);
 		}
 		
-		cls.initializeAddOn = function(){
-			var resourceCache = a5.cl.core.ResourceCache.instance();
+		cls.Override.initializeAddOn = function(){
+			var resourceCache = a5.cl.core.ResourceCache.instance(),
+				isAsync = false,
+				cfg = cls.pluginConfig();
 			
 			var generateWindow = function(){
-				if (cls.config().rootWindow) {
-					var nm = applicationPackage + '.views.' + cls.config().rootWindow;
+				if (cfg.rootWindow) {
+					var nm = applicationPackage + '.views.' + cfg.rootWindow;
 					if (a5.GetNamespace(nm)) {
 						windowSourceLoaded(nm);
 					} else {
@@ -4693,15 +4794,15 @@ a5.Package('a5.cl.mvc')
 				cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
-			if (cls.config().rootController) {
-				controller = cls.cl()._core().instantiator().createClassInstance(cls.config().rootController, 'Controller');
+			if (cfg.rootController) {
+				controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
-					cls.redirect(500, 'Invalid rootController specified, "' + cls.config().rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
+					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
 					return;
 				}
 				controllerNS = controller.namespace();
 			} else {
-				a5.Package('a5.cl.core')
+				a5.Package('a5.cl.mvc.core')
 					.Extends('a5.cl.CLController')
 					.Class('RootController', function(cls){ 
 
@@ -4713,18 +4814,19 @@ a5.Package('a5.cl.mvc')
 							cls.redirect(500, "No mapping created for default '/' mapping.")
 						}
 				});
-				controller = cls.create('a5.cl.core.RootController');	
-				controllerNS = 'a5.cl.core.RootController';
+				controller = cls.create('a5.cl.mvc.core.RootController');	
+				controllerNS = 'a5.cl.mvc.core.RootController';
 			}
 			cls.addMapping({desc:'/', controller:controllerNS}, true);
-			if (cls.config().rootViewDef) {
-				controller.defaultViewDefinition(cls.config().rootViewDef);
+			if (cfg.rootViewDef) {
+				controller.defaultViewDefinition(cfg.rootViewDef);
+				isAsync = true;
 				controller.generateView(function(view){
 					_window = view;
 					windowViewLoaded();
 				});
 			} else generateWindow();
-			return true;
+			return isAsync;
 		}
 })
 
