@@ -8,6 +8,7 @@
 a5.Package('a5.cl')
 	.Import('a5.cl.core.viewDef.ViewDefParser')
 	.Extends('CLMVCBase')
+	.Mix('a5.cl.mixins.Binder')
 	.Prototype('CLController', function(proto, im, CLController){
 		
 		this.Properties(function(){
@@ -23,8 +24,6 @@ a5.Package('a5.cl')
 			this._cl_orphanage = [];
 			this._cl_childControllers = [];
 			this._cl_id = null;
-			this._cl_bindings = [];
-			this._cl_bindingsConnected = false;
 			this._cl_viewIsInTree = false;
 		});
 		
@@ -182,70 +181,15 @@ a5.Package('a5.cl')
 			return this._cl_renderTarget || this._cl_view;
 		}
 		
-		proto.bind = function(source, receiver, params, mapping, scope, persist){
-			if(source.isA5ClassDef())
-				source = source.instance();
-			if (!source.doesMix('a5.cl.mixins.BindableSource')) {
-				this.throwError('source param of bind must implement a5.cl.interfaces.IBindableSource.');
-				return;
-			}
-			var hasParams = params !== undefined && params !== null,
-				isNM = false,
-				pType = null;
-			if(source.paramRequired() || params){
-				var isValid = true;
-			 	if (!hasParams){
-					isValid = false;
-				} else if (source.paramType() !== null){
-					pType = source.paramType();
-					if(typeof pType === 'string' && pType.indexOf('.') !== -1)
-						pType = a5.GetNamespace(pType);
-					if(pType.namespace){
-						isNM = true;
-						var nmObj = pType.namespace();
-						if(!(params instanceof pType))
-							isValid = false;
-					} else {
-						if(typeof params !== source.paramType())
-							isValid = false; 
-					}
-				}
-				if(!isValid){
-					this.throwError('params required for binding source "' + source.namespace() + '"' + (pType !== null ? ' must be of type "' + (isNM ? pType.namespace() : pType) + '"' : ''));
-					return;
-				}
-			}
-			this._cl_bindings.push({source:source, scope:scope, receiver:receiver, mapping:mapping, params:params, persist:persist})
-			//TODO: doesnt work
+		proto.Override.bind = function(source, receiver, params, mapping, scope, persist){
+			//TODO: doesnt work - need to determine whether to bind on initial setup based on view in tree status or persist true
 			//if (this.view().isInTree() || persist)
-				source.attachReceiver(receiver, params, mapping, scope);
-		}
-		
-		proto.unbind = function(source, receiver){
-			var found = false;
-			for(var i = 0, l = this._cl_bindings.length; i<l; i++){
-				var obj = this._cl_bindings[i];
-				if(obj.source === source && obj.receiver === receiver){
-					this._cl_bindings.splice(i, 1);
-					found = true;
-					break;
-				}
-			}
-			if(found)
-				source.detachReceiver(receiver);
-			else
-				this.throwError('cannot unbind source "' + source.namespace() + '" on controller "' + this.namespace() + '", binding does not exist.');
+			proto.mixins().bind.call(this, source, receiver, params, mapping, scope, persist);
 		}
 		
 		proto._cl_viewAddedToTree = function(){
-			if(!this._cl_bindingsConnected){
-				for(var i = 0, l = this._cl_bindings.length; i<l; i++){
-					var b = this._cl_bindings[i];
-					if(b.persist !== true)	
-						b.source.attachReceiver(b.receiver, b.params, b.mapping, b.scope);
-				}	
-				this._cl_bindingsConnected = true;
-			}
+			if(!this.bindingsConnected())
+				this.setBindingEnabled(true);
 			this.cl().addEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated, false, this);
 			this.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged, false, this);
 			this._cl_viewIsInTree = true;
@@ -257,14 +201,8 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_viewRemovedFromTree = function(){
-			if (this._cl_bindingsConnected) {
-				for(var i = 0, l = this._cl_bindings.length; i<l; i++){
-					var b = this._cl_bindings[i];
-					if(b.persist !== true)	
-						b.source.detachReceiver(b.receiver);
-				}	
-				this._cl_bindingsConnected = false;
-			}
+			if (this._cl_bindingsConnected)
+				this.setBindingEnabled(false);
 			this.cl().removeEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated);
 			this.cl().removeEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged);
 			this._cl_viewIsInTree = false;
