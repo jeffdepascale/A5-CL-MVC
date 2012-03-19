@@ -112,8 +112,12 @@ a5.Package('a5.cl.mvc.core')
 										if (!isOptional) isValid = false;
 									} else {
 										if (paramArray[j] == 'id') {
-											retObj.id = hashArray.slice(i);
-											hasIDProps = true;
+											if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+												isValid = false;
+											} else {
+												retObj.id = hashArray.slice(i);
+												hasIDProps = true;
+											}
 										} else retObj[paramArray[j]] = hashArray[i];
 									}
 								} else {

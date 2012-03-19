@@ -13,7 +13,7 @@ a5.Package('a5.cl.mvc.core')
 			self.superclass(this);
 			mappings = a5.cl.mvc.core.Mappings.instance();
 			filters = a5.cl.mvc.core.Filters.instance();
-			hash = a5.cl.mvc.core.Hash.instance();
+			hash = self.plugins().HashManager();
 		}	
 		
 		this._renderError = function(type, info){

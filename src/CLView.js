@@ -1093,7 +1093,7 @@ a5.Package("a5.cl")
 		}
 		
 		proto._cl_destroyElement = function(elem){
-			this.cl()._core().garbageCollector().destroyElement(elem);
+			this.MVC()._core().garbageCollector().destroyElement(elem);
 		}
 		
 		proto.dealloc = function(){

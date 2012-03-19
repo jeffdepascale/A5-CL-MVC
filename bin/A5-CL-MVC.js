@@ -17,31 +17,9 @@ a5.Package('a5.cl')
 		proto.mvcName = function(){
 			return this._cl_mvcName || this.instanceUID();
 		}
-		
-		/**
-		 * The redirect method throws a control change to A5 CL.
-		 * @name redirect
-		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
-		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
-		 * @param {String} [param.url] A string value to pass as a location redirect. 
-		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
-		 * @param {String} [param.action] A string value of the name of the method action to call. 
-		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
-		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
-		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
-		 */
+
 		proto.redirect = function(params, info, forceRedirect){
-			if(this.MVC().locationManager()){
-				return this.MVC().locationManager().redirect(params, info, forceRedirect);
-			} else {
-				if(params === 500){
-					var isError = info instanceof a5.Error;
-					if(isError && !info.isWindowError())
-						this.throwError(info);
-					else
-						throw info;
-				}
-			}
+			this.MVC().redirect(params, info, forceRedirect);
 		}
 		
 		proto._cl_setMVCName = function(name){
@@ -257,7 +235,7 @@ a5.Package('a5.cl.mvc.core')
 			self.superclass(this);
 			mappings = a5.cl.mvc.core.Mappings.instance();
 			filters = a5.cl.mvc.core.Filters.instance();
-			hash = a5.cl.mvc.core.Hash.instance();
+			hash = self.plugins().HashManager();
 		}	
 		
 		this._renderError = function(type, info){
@@ -338,134 +316,6 @@ a5.Package('a5.cl.mvc.core')
 			}
 		}
 })
-
-
-a5.Package("a5.cl.mvc.core")
-
-	.Import('a5.cl.CLEvent')
-	.Extends('a5.cl.CLMVCBase')
-	.Class("Hash", 'singleton final', function(self, im){
-	
-		var lastHash,
-		trackHash,
-		iframe,
-		forceOnNext,
-		hashDelimiter;
-		
-		this.Hash = function(){
-			self.superclass(this);
-			iframe = null;
-			lastHash = null;
-			forceOnNext = false;
-			browserSupportCheck();
-			hashDelimiter = self.config().hashDelimiter;
-			if (getHash(true) == "") setLocHash(hashDelimiter);
-		}
-		
-		this.initialize = function(){
-			update();
-			var oldIE = self.cl().clientPlatform() === 'IE' && self.cl().browserVersion() < 9;
-			if ('onhashchange' in window && !oldIE) {
-				window.onhashchange = update;
-			} else self.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
-		}
-		
-		this.setHash = function(hash, skipUpdate, forceRedirect) {
-			var concatHash = '';
-			if(hash instanceof Array) hash = hash.join('/');
-			if(hash == null || hash == '/') hash = "";
-			if (forceRedirect === true || (hash !== lastHash && hash !== getHash())) {
-				if (hash == "") {
-					if (skipUpdate === true) lastHash = hashDelimiter;
-					setLocHash(hashDelimiter);
-				} else {
-					if (typeof hash == 'object') {
-						for (var i = 0, l=hash.length; i < l; i++) {
-							if (hash[i] == undefined && hash[i] == null) {
-								hash.splice(i, 1);
-								l=hash.length;
-								i--;
-							}
-						}
-						for (i = 0, l=hash.length; i < l; i++) 
-							concatHash += (hash[i] + (i < hash.length - 1 ? '/' : ''));
-					}
-					else {
-						concatHash = hash;
-					}
-					if (concatHash.substr(0, 1) == '/') concatHash = concatHash.substr(1);
-					if (concatHash.substr(0, hashDelimiter.length) != hashDelimiter) concatHash = hashDelimiter + '/' + concatHash;
-					if (skipUpdate === true) lastHash = concatHash;
-					setLocHash(concatHash);
-				}
-				if (forceRedirect) {
-					forceOnNext = true;
-					update();
-				}
-			}
-		}
-		
-		var processHash = function(hash){
-			var parsedLinks = hash.split('/');
-			parsedLinks.shift();
-			return parsedLinks;
-		},
-		
-		update = function(){
-			var hash = getHash();
-			if(hash != lastHash || forceOnNext) {
-				forceOnNext = false;
-				lastHash = hash;
-				if(iframe && lastHash != null) setLocHash(lastHash);
-				var parsedLinks = processHash(lastHash);
-				self.cl().dispatchEvent(im.CLEvent.HASH_CHANGE, {hashArray:parsedLinks});
-			}
-		},
-		
-		getHash = function($ignoreDelimiter){
-			var val;
-			if (iframe) {
-				try {
-					if (lastHash != location.hash) val = location.hash;
-					else val = getIframeDoc().body.innerText;
-				} catch (e) {
-					val = lastHash || "";
-				}
-			} else {
-				val = location.hash;
-			}
-			return val;
-		},
-		
-		
-		browserSupportCheck = function(){
-	        if (self.cl().clientPlatform() == 'IE'&& self.cl().browserVersion() < 8) createIframe();
-			else if (history.navigationMode) history.navigationMode = 'compatible';
-		},	
-		
-		setLocHash = function (newHash, $forceIframe) {
-			var forceIframe = $forceIframe || false;
-			if (!forceIframe) location.hash = newHash;
-			if (iframe) {
-				var doc = getIframeDoc();
-				doc.open();
-				doc.write('<html><body>' + newHash + '</body></html>');
-				doc.close();
-			}
-		},
-	
-		createIframe = function () {
-			iframe = document.createElement('iframe');
-			iframe.style.display = 'none';
-			document.getElementsByTagName("head")[0].appendChild(iframe);
-		},
-		
-		getIframeDoc = function(){
-			return (iframe.contentDocument) ? iframe.contentDocument:iframe.Document;
-		}
-	
-})
-
 
 
 a5.Package('a5.cl.mvc.core')
@@ -4203,7 +4053,7 @@ a5.Package('a5.cl')
 		proto.Override.bind = function(source, receiver, params, mapping, scope, persist){
 			//TODO: doesnt work - need to determine whether to bind on initial setup based on view in tree status or persist true
 			//if (this.view().isInTree() || persist)
-			this.mixins().bind.call(this, source, receiver, params, mapping, scope, persist);
+			proto.mixins().bind.call(this, source, receiver, params, mapping, scope, persist);
 		}
 		
 		proto._cl_viewAddedToTree = function(){
@@ -4503,9 +4353,158 @@ a5.Package("a5.cl")
 });
 
 
+a5.Package('a5.cl.plugins.hashManager')
+
+	.Extends('a5.cl.CLPlugin')
+	.Class('HashManager', 'singleton final', function(cls, im, HashManager){
+
+		var lastHash,
+		trackHash,
+		iframe,
+		forceOnNext,
+		hashDelimiter;
+		
+		cls.HashManager = function(){
+			cls.superclass(this);
+			iframe = null;
+			lastHash = null;
+			forceOnNext = false;
+			cls.configDefaults({
+				delimiter:'#!'
+			});
+			browserSupportCheck();
+		}	
+		
+		cls.Override.initializePlugin = function(){
+			hashDelimiter = cls.pluginConfig().delimiter;
+			if(getHash(true) == "") setLocHash(hashDelimiter);
+		}
+		
+		cls.initialize = function(){
+			update();
+			var oldIE = cls.cl().clientPlatform() === 'IE' && cls.cl().browserVersion() < 9;
+			if ('onhashchange' in window && !oldIE) {
+				window.onhashchange = update;
+			} else cls.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
+		}
+		
+		cls.setHash = function(hash, skipUpdate, forceRedirect) {
+			var concatHash = '';
+			if(hash instanceof Array) hash = hash.join('/');
+			if(hash == null || hash == '/') hash = "";
+			if (forceRedirect === true || (hash !== lastHash && hash !== getHash())) {
+				if (hash == "") {
+					if (skipUpdate === true) lastHash = hashDelimiter;
+					setLocHash(hashDelimiter);
+				} else {
+					if (typeof hash == 'object') {
+						for (var i = 0, l=hash.length; i < l; i++) {
+							if (hash[i] == undefined && hash[i] == null) {
+								hash.splice(i, 1);
+								l=hash.length;
+								i--;
+							}
+						}
+						for (i = 0, l=hash.length; i < l; i++) 
+							concatHash += (hash[i] + (i < hash.length - 1 ? '/' : ''));
+					}
+					else {
+						concatHash = hash;
+					}
+					if (concatHash.substr(0, 1) == '/') concatHash = concatHash.substr(1);
+					if (concatHash.substr(0, hashDelimiter.length) != hashDelimiter) concatHash = hashDelimiter + '/' + concatHash;
+					if (skipUpdate === true) lastHash = concatHash;
+					setLocHash(concatHash);
+				}
+				if (forceRedirect) {
+					forceOnNext = true;
+					update();
+				}
+			}
+		}
+		
+		var processHash = function(hash){
+			hash = hash.substring(hashDelimiter.length);
+			var parsedLinks = hash.split('/');
+			if(parsedLinks[0] === "")
+				parsedLinks.shift();
+			return parsedLinks;
+		},
+		
+		update = function(){
+			var hash = getHash();
+			if(hash != lastHash || forceOnNext) {
+				forceOnNext = false;
+				lastHash = hash;
+				if(iframe && lastHash != null) setLocHash(lastHash);
+				var parsedLinks = processHash(lastHash);
+				cls.dispatchEvent(im.CLHashEvent.HASH_CHANGE, {hashArray:parsedLinks});
+			}
+		},
+		
+		getHash = function($ignoreDelimiter){
+			var val;
+			if (iframe) {
+				try {
+					if (lastHash != location.hash) val = location.hash;
+					else val = getIframeDoc().body.innerText;
+				} catch (e) {
+					val = lastHash || "";
+				}
+			} else {
+				val = location.hash;
+			}
+			return val;
+		},
+		
+		
+		browserSupportCheck = function(){
+	        if (cls.cl().clientPlatform() == 'IE'&& cls.cl().browserVersion() < 8) createIframe();
+			else if (history.navigationMode) history.navigationMode = 'compatible';
+		},	
+		
+		setLocHash = function (newHash, $forceIframe) {
+			var forceIframe = $forceIframe || false;
+			if (!forceIframe) location.hash = newHash;
+			if (iframe) {
+				var doc = getIframeDoc();
+				doc.open();
+				doc.write('<html><body>' + newHash + '</body></html>');
+				doc.close();
+			}
+		},
+	
+		createIframe = function () {
+			iframe = document.createElement('iframe');
+			iframe.style.display = 'none';
+			document.getElementsByTagName("head")[0].appendChild(iframe);
+		},
+		
+		getIframeDoc = function(){
+			return (iframe.contentDocument) ? iframe.contentDocument:iframe.Document;
+		}
+		
+		
+});
+
+a5.Package('a5.cl.plugins.hashManager')
+
+	.Extends('a5.cl.CLEvent')
+	.Prototype('CLHashEvent', function(cls, im, CLHashEvent){
+		
+		CLHashEvent.HASH_CHANGE = 'clHashChangeEvent';
+		
+		cls.CLHashEvent = function(){
+			cls.superclass(this);
+		}		
+});
+
+
+
 a5.Package('a5.cl.mvc')
 
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.plugins.hashManager.CLHashEvent')
 	.Extends('a5.cl.CLAddon')
 	.Class('MVC', function(cls, im, MVC){
 		
@@ -4527,6 +4526,8 @@ a5.Package('a5.cl.mvc')
 				rootViewDef: null,
 				rootWindow:null
 			});
+			cls.createMainConfigMethod('filters');
+			cls.createMainConfigMethod('mappings');
 		}
 		
 		this.rootController = function(){
@@ -4602,30 +4603,28 @@ a5.Package('a5.cl.mvc')
 			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
 			_mappings = cls.create(a5.cl.mvc.core.Mappings);
 			_filters = cls.create(a5.cl.mvc.core.Filters);
-			_hash = cls.create(a5.cl.mvc.core.Hash);
+			_hash = cls.plugins().HashManager();
 			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
 			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
-			cls.cl().addEventListener(im.CLEvent.HASH_CHANGE, eHashChangeHandler);
+			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
 			a5.cl.core.Utils.purgeBody();
 			cls.application().view().draw();
-			cls.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, eInstantiateCompleteHandler);
-			cls.createMainConfigMethod('filters');
-			cls.createMainConfigMethod('mappings');
+			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
 		
-		var eInstantiateCompleteHandler = function(){
+		var eApplicationPreparedHandler = function(){
 			var $filters = cls.getMainConfigProps('filters');
 			if($filters) 
-				for (var i = 0, l=$filters[0].length; i<l; i++) 
-					_filters.addFilter($filters[0][i], true);
+				for (var i = 0, l=$filters.length; i<l; i++) 
+					_filters.addFilter($filters[i], true);
 			var $mappings = cls.getMainConfigProps('mappings');
 			if ($mappings) {
-				for (var i = 0, l=$mappings[0].length; i < l; i++) 
-					_mappings.addMapping($mappings[0][i], false);
+				for (var i = 0, l=$mappings.length; i < l; i++) 
+					_mappings.addMapping($mappings[i], false);
 			}
 		}
 		
@@ -4637,6 +4636,32 @@ a5.Package('a5.cl.mvc')
 		 * @param {Number} e.height
 		 */
 		this.windowProps = function(){	return _envManager.windowProps();	}
+		
+		/**
+		 * The redirect method throws a control change to A5 CL.
+		 * @name redirect
+		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
+		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
+		 * @param {String} [param.url] A string value to pass as a location redirect. 
+		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
+		 * @param {String} [param.action] A string value of the name of the method action to call. 
+		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
+		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
+		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
+		 */
+		this.redirect = function(params, info, forceRedirect){
+			if(_locationManager){
+				return _locationManager.redirect(params, info, forceRedirect);
+			} else {
+				if(params === 500){
+					var isError = info instanceof a5.Error;
+					if(isError && !info.isWindowError())
+						this.throwError(info);
+					else
+						throw info;
+				}
+			}
+		}
 		
 		cls.setTitle = function(value, append){
 			var str = cls.config().appName,

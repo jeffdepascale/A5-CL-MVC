@@ -1,7 +1,8 @@
 
 a5.Package('a5.cl.mvc')
 
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.plugins.hashManager.CLHashEvent')
 	.Extends('a5.cl.CLAddon')
 	.Class('MVC', function(cls, im, MVC){
 		
@@ -23,6 +24,8 @@ a5.Package('a5.cl.mvc')
 				rootViewDef: null,
 				rootWindow:null
 			});
+			cls.createMainConfigMethod('filters');
+			cls.createMainConfigMethod('mappings');
 		}
 		
 		this.rootController = function(){
@@ -98,30 +101,28 @@ a5.Package('a5.cl.mvc')
 			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
 			_mappings = cls.create(a5.cl.mvc.core.Mappings);
 			_filters = cls.create(a5.cl.mvc.core.Filters);
-			_hash = cls.create(a5.cl.mvc.core.Hash);
+			_hash = cls.plugins().HashManager();
 			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
 			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
-			cls.cl().addEventListener(im.CLEvent.HASH_CHANGE, eHashChangeHandler);
+			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
 			a5.cl.core.Utils.purgeBody();
 			cls.application().view().draw();
-			cls.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, eInstantiateCompleteHandler);
-			cls.createMainConfigMethod('filters');
-			cls.createMainConfigMethod('mappings');
+			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
 		
-		var eInstantiateCompleteHandler = function(){
+		var eApplicationPreparedHandler = function(){
 			var $filters = cls.getMainConfigProps('filters');
 			if($filters) 
-				for (var i = 0, l=$filters[0].length; i<l; i++) 
-					_filters.addFilter($filters[0][i], true);
+				for (var i = $filters.length-1, l=-1; i>l; i--) 
+					_filters.addFilter($filters[i], false);
 			var $mappings = cls.getMainConfigProps('mappings');
 			if ($mappings) {
-				for (var i = 0, l=$mappings[0].length; i < l; i++) 
-					_mappings.addMapping($mappings[0][i], false);
+				for (var i = $mappings.length-1, l=-1; i>l; i--) 
+					_mappings.addMapping($mappings[i], false);
 			}
 		}
 		
@@ -133,6 +134,32 @@ a5.Package('a5.cl.mvc')
 		 * @param {Number} e.height
 		 */
 		this.windowProps = function(){	return _envManager.windowProps();	}
+		
+		/**
+		 * The redirect method throws a control change to A5 CL.
+		 * @name redirect
+		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
+		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
+		 * @param {String} [param.url] A string value to pass as a location redirect. 
+		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
+		 * @param {String} [param.action] A string value of the name of the method action to call. 
+		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
+		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
+		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
+		 */
+		this.redirect = function(params, info, forceRedirect){
+			if(_locationManager){
+				return _locationManager.redirect(params, info, forceRedirect);
+			} else {
+				if(params === 500){
+					var isError = info instanceof a5.Error;
+					if(isError && !info.isWindowError())
+						this.throwError(info);
+					else
+						throw info;
+				}
+			}
+		}
 		
 		cls.setTitle = function(value, append){
 			var str = cls.config().appName,
