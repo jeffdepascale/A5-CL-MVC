@@ -9,14 +9,30 @@ a5.Package("a5.cl.mvc.core")
 		
 		this.Filters = function(){
 			self.superclass(this);
-			filters = [];
+			filters = ['_cl_appPlaceholder'];
 		}
 		
 		
 		this.addFilter = function(params, $append){
 			var append = $append || false;
-			if(append) filters.push(params);
+			if(typeof append === 'number') filters.splice(append, 0, params);
+			else if(append) filters.push(params);
 			else filters.unshift(params);
+		}
+		
+		this.addAppFilters = function($filters){
+			var placeHolderIndex;
+			for(var i = 0, l=filters.length; i<l; i++){
+				if(mappings[i] === '_cl_appPlaceholder'){
+					placeHolderIndex = i;
+					filters.splice(i, 1);
+					break;	
+				}
+			}
+			for (var i = 0, l=$filters.length; i < l; i++){
+				this.addFilter($filters[i], placeHolderIndex);
+				placeHolderIndex++;
+			}
 		}
 	
 		this.test = function(loading, unloading, callback){

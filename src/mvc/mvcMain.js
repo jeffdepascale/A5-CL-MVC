@@ -117,13 +117,10 @@ a5.Package('a5.cl.mvc')
 		var eApplicationPreparedHandler = function(){
 			var $filters = cls.getMainConfigProps('filters');
 			if($filters) 
-				for (var i = $filters.length-1, l=-1; i>l; i--) 
-					_filters.addFilter($filters[i], false);
+				_filters.addAppFilters($filters);
 			var $mappings = cls.getMainConfigProps('mappings');
-			if ($mappings) {
-				for (var i = $mappings.length-1, l=-1; i>l; i--) 
-					_mappings.addMapping($mappings[i], false);
-			}
+			if ($mappings)
+					_mappings.addAppMappings($mappings);
 		}
 		
 		/**

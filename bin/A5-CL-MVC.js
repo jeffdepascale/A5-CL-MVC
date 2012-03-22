@@ -1625,7 +1625,7 @@ a5.Package("a5.cl")
 		}
 		
 		proto._cl_destroyElement = function(elem){
-			this.cl()._core().garbageCollector().destroyElement(elem);
+			this.MVC().garbageCollector().destroyElement(elem);
 		}
 		
 		proto.dealloc = function(){
@@ -2385,14 +2385,30 @@ a5.Package("a5.cl.mvc.core")
 		
 		this.Filters = function(){
 			self.superclass(this);
-			filters = [];
+			filters = ['_cl_appPlaceholder'];
 		}
 		
 		
 		this.addFilter = function(params, $append){
 			var append = $append || false;
-			if(append) filters.push(params);
+			if(typeof append === 'number') filters.splice(append, 0, params);
+			else if(append) filters.push(params);
 			else filters.unshift(params);
+		}
+		
+		this.addAppFilters = function($filters){
+			var placeHolderIndex;
+			for(var i = 0, l=filters.length; i<l; i++){
+				if(mappings[i] === '_cl_appPlaceholder'){
+					placeHolderIndex = i;
+					filters.splice(i, 1);
+					break;	
+				}
+			}
+			for (var i = 0, l=$filters.length; i < l; i++){
+				this.addFilter($filters[i], placeHolderIndex);
+				placeHolderIndex++;
+			}
 		}
 	
 		this.test = function(loading, unloading, callback){
@@ -2498,7 +2514,8 @@ a5.Package('a5.cl.mvc.core')
 	
 		this.Mappings = function(){
 			self.superclass(this);
-			mappings = errorMappings = [];
+			mappings = ['_cl_appPlaceholder'];
+			errorMappings = ['_cl_appPlaceholder'];
 		}
 		
 		this.addMapping = function(mappingObj, $append){
@@ -2525,8 +2542,37 @@ a5.Package('a5.cl.mvc.core')
 				} else {
 					self.throwError('invalid mapping: "desc" param must be a string');
 				}
-				if(append) mappings.push(mappingObj);
+				if(typeof append === 'number') mappings.splice(append, 0, mappingObj);
+				else if(append) mappings.push(mappingObj);
 				else mappings.unshift(mappingObj);
+			}
+		}
+		
+		this.addAppMappings = function($mappings){
+			var placeHolderIndex,
+				errorPlaceHolderIndex;
+			for(var i = 0, l=mappings.length; i<l; i++){
+				if(mappings[i] === '_cl_appPlaceholder'){
+					placeHolderIndex = i;
+					mappings.splice(i, 1);
+					break;	
+				}
+			}
+			for(var i = 0, l=errorMappings.length; i<l; i++){
+				if(errorMappings[i] === '_cl_appPlaceholder'){
+					errorPlaceHolderIndex = i;
+					errorMappings.splice(i, 1);
+					break;	
+				}
+			}
+			for (var i = 0, l=$mappings.length; i < l; i++){
+				if(typeof $mappings[i].desc === 'number'){
+					this.addMapping($mappings[i], errorPlaceHolderIndex);
+					errorPlaceHolderIndex++;
+				} else {
+					this.addMapping($mappings[i], placeHolderIndex);
+					placeHolderIndex++;
+				}
 			}
 		}
 		
@@ -2597,8 +2643,12 @@ a5.Package('a5.cl.mvc.core')
 										if (!isOptional) isValid = false;
 									} else {
 										if (paramArray[j] == 'id') {
-											retObj.id = hashArray.slice(i);
-											hasIDProps = true;
+											if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+												isValid = false;
+											} else {
+												retObj.id = hashArray.slice(i);
+												hasIDProps = true;
+											}
 										} else retObj[paramArray[j]] = hashArray[i];
 									}
 								} else {
@@ -4619,13 +4669,10 @@ a5.Package('a5.cl.mvc')
 		var eApplicationPreparedHandler = function(){
 			var $filters = cls.getMainConfigProps('filters');
 			if($filters) 
-				for (var i = 0, l=$filters.length; i<l; i++) 
-					_filters.addFilter($filters[i], true);
+				_filters.addAppFilters($filters);
 			var $mappings = cls.getMainConfigProps('mappings');
-			if ($mappings) {
-				for (var i = 0, l=$mappings.length; i < l; i++) 
-					_mappings.addMapping($mappings[i], false);
-			}
+			if ($mappings)
+					_mappings.addAppMappings($mappings);
 		}
 		
 		/**

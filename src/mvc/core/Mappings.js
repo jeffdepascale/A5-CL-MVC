@@ -13,7 +13,8 @@ a5.Package('a5.cl.mvc.core')
 	
 		this.Mappings = function(){
 			self.superclass(this);
-			mappings = errorMappings = [];
+			mappings = ['_cl_appPlaceholder'];
+			errorMappings = ['_cl_appPlaceholder'];
 		}
 		
 		this.addMapping = function(mappingObj, $append){
@@ -40,8 +41,37 @@ a5.Package('a5.cl.mvc.core')
 				} else {
 					self.throwError('invalid mapping: "desc" param must be a string');
 				}
-				if(append) mappings.push(mappingObj);
+				if(typeof append === 'number') mappings.splice(append, 0, mappingObj);
+				else if(append) mappings.push(mappingObj);
 				else mappings.unshift(mappingObj);
+			}
+		}
+		
+		this.addAppMappings = function($mappings){
+			var placeHolderIndex,
+				errorPlaceHolderIndex;
+			for(var i = 0, l=mappings.length; i<l; i++){
+				if(mappings[i] === '_cl_appPlaceholder'){
+					placeHolderIndex = i;
+					mappings.splice(i, 1);
+					break;	
+				}
+			}
+			for(var i = 0, l=errorMappings.length; i<l; i++){
+				if(errorMappings[i] === '_cl_appPlaceholder'){
+					errorPlaceHolderIndex = i;
+					errorMappings.splice(i, 1);
+					break;	
+				}
+			}
+			for (var i = 0, l=$mappings.length; i < l; i++){
+				if(typeof $mappings[i].desc === 'number'){
+					this.addMapping($mappings[i], errorPlaceHolderIndex);
+					errorPlaceHolderIndex++;
+				} else {
+					this.addMapping($mappings[i], placeHolderIndex);
+					placeHolderIndex++;
+				}
 			}
 		}
 		
