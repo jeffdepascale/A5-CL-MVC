@@ -23,16 +23,17 @@ a5.Package("a5.cl.mvc.core")
 		this.addAppFilters = function($filters){
 			var placeHolderIndex;
 			for(var i = 0, l=filters.length; i<l; i++){
-				if(mappings[i] === '_cl_appPlaceholder'){
+				if(filters[i] === '_cl_appPlaceholder'){
 					placeHolderIndex = i;
 					filters.splice(i, 1);
 					break;	
 				}
 			}
-			for (var i = 0, l=$filters.length; i < l; i++){
-				this.addFilter($filters[i], placeHolderIndex);
-				placeHolderIndex++;
-			}
+			if($filters)
+				for (var i = 0, l=$filters.length; i < l; i++){
+					this.addFilter($filters[i], placeHolderIndex);
+					placeHolderIndex++;
+				}
 		}
 	
 		this.test = function(loading, unloading, callback){

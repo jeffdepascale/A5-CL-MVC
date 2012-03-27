@@ -45,7 +45,7 @@ a5.Package('a5.cl')
 			} else if (defaultView instanceof a5.cl.CLView) {
 				this._cl_viewCreated(defaultView);
 				this._cl_viewReady();
-			} else if(defaultView === true){
+			} else if(defaultView !== true){
 				this._cl_viewCreated(this.create(a5.cl.CLViewContainer));
 				this._cl_viewReady();
 			}

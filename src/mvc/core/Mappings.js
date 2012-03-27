@@ -64,15 +64,16 @@ a5.Package('a5.cl.mvc.core')
 					break;	
 				}
 			}
-			for (var i = 0, l=$mappings.length; i < l; i++){
-				if(typeof $mappings[i].desc === 'number'){
-					this.addMapping($mappings[i], errorPlaceHolderIndex);
-					errorPlaceHolderIndex++;
-				} else {
-					this.addMapping($mappings[i], placeHolderIndex);
-					placeHolderIndex++;
+			if($mappings)
+				for (var i = 0, l=$mappings.length; i < l; i++){
+					if(typeof $mappings[i].desc === 'number'){
+						this.addMapping($mappings[i], errorPlaceHolderIndex);
+						errorPlaceHolderIndex++;
+					} else {
+						this.addMapping($mappings[i], placeHolderIndex);
+						placeHolderIndex++;
+					}
 				}
-			}
 		}
 		
 		this.getCallSignature = function(hashArray){
