@@ -117,6 +117,7 @@ a5.Package("a5.cl")
 		this.Properties(function(){
 			this._cl_viewElement = null;
 			this._cl_viewElementType = 'div';
+			this._cl_viewIsReady = false;
 			this._cl_parentView = null;
 			this._cl_showOverflow = false;
 			this._cl_alignX = 'left';
@@ -614,7 +615,11 @@ a5.Package("a5.cl")
 		 * @name viewReady
 		 */
 		proto.viewReady = function(){
-			
+			this._cl_viewIsReady = true;
+		}
+		
+		proto.viewIsReady = function(){
+			return this._cl_viewIsReady;
 		}
 		
 		/**

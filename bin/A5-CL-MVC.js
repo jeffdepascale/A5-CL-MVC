@@ -649,6 +649,7 @@ a5.Package("a5.cl")
 		this.Properties(function(){
 			this._cl_viewElement = null;
 			this._cl_viewElementType = 'div';
+			this._cl_viewIsReady = false;
 			this._cl_parentView = null;
 			this._cl_showOverflow = false;
 			this._cl_alignX = 'left';
@@ -1146,7 +1147,11 @@ a5.Package("a5.cl")
 		 * @name viewReady
 		 */
 		proto.viewReady = function(){
-			
+			this._cl_viewIsReady = true;
+		}
+		
+		proto.viewIsReady = function(){
+			return this._cl_viewIsReady;
 		}
 		
 		/**
@@ -2162,7 +2167,8 @@ a5.Package('a5.cl.core.viewDef')
 						customNodeTarget = this._cl_controller;
 					customNodeTarget.processCustomViewDefNode(nodeObj._name, nodeObj, this._cl_imports, this._cl_defaults, this._cl_rootView);
 					this._cl_childIndex++;
-					if(!this._cl_isCustomNode)
+					//Added method check due to CLView being a possible node owner
+					if(this._cl_view._cl_vdViewAdded && !this._cl_isCustomNode)
 						this._cl_view._cl_vdViewAdded();
 					this._cl_buildNextChild();
 					return;
@@ -2175,7 +2181,8 @@ a5.Package('a5.cl.core.viewDef')
 					return;
 				}
 			} else {
-				if (this._cl_childIndex === 0 && !this._cl_isCustomNode) 
+				//Added method check due to CLView being a possible node owner
+				if (this._cl_view._cl_vdViewReady && this._cl_childIndex === 0 && !this._cl_isCustomNode) 
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);
@@ -2759,7 +2766,9 @@ a5.Package('a5.cl')
 	
 	.Import('a5.cl.CLEvent')
 	.Extends('CLView')
-	.Prototype('CLHTMLView', function(proto, im){
+	.Prototype('CLHTMLView', function(proto, im, CLHTMLView){
+		
+		CLHTMLView.customViewDefNodes = ['HTML'];
 		
 		/**#@+
 	 	 * @memberOf a5.cl.CLHTMLView#
@@ -2773,6 +2782,7 @@ a5.Package('a5.cl')
 			this._cl_disallowHrefs = false;
 			this._cl_scrollWidth = null;
 			this._cl_scrollHeight = null;
+			this._cl_cachedHTML = null;
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
 		};
@@ -2782,6 +2792,25 @@ a5.Package('a5.cl')
 			this.clickHandlingEnabled(true);
 			if(html !== undefined)
 				this.drawHTML(html);
+		}
+		
+		proto.Override.viewReady = function(){
+			proto.superclass().viewReady.call(this);
+			if (this._cl_cachedHTML !== null) {
+				this.drawHTML(this._cl_cachedHTML);
+				this._cl_cachedHTML = null;
+			}
+		}
+		
+		proto.Override.processCustomViewDefNode = function(nodeName, node, imports, defaults, rootView){
+			if(nodeName === 'HTML'){
+				if(this.viewIsReady())
+					this.drawHTML(node.node.textContent);
+				else	
+					this._cl_cachedHTML = node.node.textContent;
+			} else {
+				self.superclass().processCustomViewDefNode.apply(this, arguments);
+			}
 		}
 		
 		/**
@@ -4436,6 +4465,16 @@ a5.Package('a5.cl.plugins.hashManager')
 			if ('onhashchange' in window && !oldIE) {
 				window.onhashchange = update;
 			} else cls.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
+		}
+		
+		cls.getHash = function(asString){
+			if (asString === true) {
+				return lastHash;
+			} else {
+				var spl = lastHash.split('/');
+				spl.shift();
+				return spl;
+			}
 		}
 		
 		cls.setHash = function(hash, skipUpdate, forceRedirect) {

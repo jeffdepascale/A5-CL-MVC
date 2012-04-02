@@ -157,7 +157,8 @@ a5.Package('a5.cl.core.viewDef')
 						customNodeTarget = this._cl_controller;
 					customNodeTarget.processCustomViewDefNode(nodeObj._name, nodeObj, this._cl_imports, this._cl_defaults, this._cl_rootView);
 					this._cl_childIndex++;
-					if(!this._cl_isCustomNode)
+					//Added method check due to CLView being a possible node owner
+					if(this._cl_view._cl_vdViewAdded && !this._cl_isCustomNode)
 						this._cl_view._cl_vdViewAdded();
 					this._cl_buildNextChild();
 					return;
@@ -170,7 +171,8 @@ a5.Package('a5.cl.core.viewDef')
 					return;
 				}
 			} else {
-				if (this._cl_childIndex === 0 && !this._cl_isCustomNode) 
+				//Added method check due to CLView being a possible node owner
+				if (this._cl_view._cl_vdViewReady && this._cl_childIndex === 0 && !this._cl_isCustomNode) 
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);

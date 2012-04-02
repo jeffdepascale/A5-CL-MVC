@@ -8,7 +8,9 @@ a5.Package('a5.cl')
 	
 	.Import('a5.cl.CLEvent')
 	.Extends('CLView')
-	.Prototype('CLHTMLView', function(proto, im){
+	.Prototype('CLHTMLView', function(proto, im, CLHTMLView){
+		
+		CLHTMLView.customViewDefNodes = ['HTML'];
 		
 		/**#@+
 	 	 * @memberOf a5.cl.CLHTMLView#
@@ -22,6 +24,7 @@ a5.Package('a5.cl')
 			this._cl_disallowHrefs = false;
 			this._cl_scrollWidth = null;
 			this._cl_scrollHeight = null;
+			this._cl_cachedHTML = null;
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
 		};
@@ -31,6 +34,25 @@ a5.Package('a5.cl')
 			this.clickHandlingEnabled(true);
 			if(html !== undefined)
 				this.drawHTML(html);
+		}
+		
+		proto.Override.viewReady = function(){
+			proto.superclass().viewReady.call(this);
+			if (this._cl_cachedHTML !== null) {
+				this.drawHTML(this._cl_cachedHTML);
+				this._cl_cachedHTML = null;
+			}
+		}
+		
+		proto.Override.processCustomViewDefNode = function(nodeName, node, imports, defaults, rootView){
+			if(nodeName === 'HTML'){
+				if(this.viewIsReady())
+					this.drawHTML(node.node.textContent);
+				else	
+					this._cl_cachedHTML = node.node.textContent;
+			} else {
+				self.superclass().processCustomViewDefNode.apply(this, arguments);
+			}
 		}
 		
 		/**
