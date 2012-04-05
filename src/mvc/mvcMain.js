@@ -44,7 +44,7 @@ a5.Package('a5.cl.mvc')
 		this.locationManager = function(){ return _locationManager; }
 		this.garbageCollector = function(){return _garbageCollector;}
 		this.envManager = function(){ return _envManager; }
-		this._mvc_redrawEngine = function(){ return _redrawEngine; }
+		this.triggerAppRedraw = function(){ this.redrawEngine().triggerAppRedraw(); }
 		
 		/**
 		 * Adds a filter test case to the filters list.
@@ -249,11 +249,15 @@ a5.Package('a5.cl.mvc')
 			var windowReady = function(){
 				if (_window) 
 					cls.application().rootWindowLoaded(_window);
-				cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
+				if(isAsync)
+					cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
 			if (cfg.rootController) {
-				controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
+				if(cfg.rootController.indexOf('.') !== -1)
+					controller = cls.create(a5.GetNamespace(cfg.rootController));
+				else	
+					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
 					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
 					return;
@@ -278,7 +282,7 @@ a5.Package('a5.cl.mvc')
 			cls.addMapping({desc:'/', controller:controllerNS}, true);
 			if (cfg.rootViewDef) {
 				controller.defaultViewDefinition(cfg.rootViewDef);
-				isAsync = true;
+				isAsync = !(/<.+>/.test(cfg.rootViewDef));
 				controller.generateView(function(view){
 					_window = view;
 					windowViewLoaded();

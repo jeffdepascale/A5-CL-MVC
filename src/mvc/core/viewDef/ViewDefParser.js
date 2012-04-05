@@ -49,7 +49,7 @@ a5.Package('a5.cl.core.viewDef')
 			var attributes = value.split('|'),
 				json = window.JSON || a5.cl.core.JSON,
 			//regex for detecting strict typing
-				typeFlags = /{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
+				typeFlags = /{RegExp}|{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
 			//loop through each attribute value and process it
 				processed = [],
 				x, y, attr, type;
@@ -77,6 +77,10 @@ a5.Package('a5.cl.core.viewDef')
 						break;
 					case '{Namespace}': //resolve namespace
 						processed.push(a5.GetNamespace(attr, this._cl_imports));
+						break;
+					case '{RegExp}': // resolve regexp
+						var split = attr.split('/');
+						processed.push(new RegExp(split[1], split[2]));
 						break;
 					default: //try to guess by default
 						if(!isNaN(attr)) //check if it's a number

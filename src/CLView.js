@@ -222,7 +222,7 @@ a5.Package("a5.cl")
 		 * @name index
 		 */
 		proto.index = function(){
-			return this._cl_viewElement.style.zIndex;
+			return parseInt(this._cl_viewElement.style.zIndex);
 		}
 		
 		/**

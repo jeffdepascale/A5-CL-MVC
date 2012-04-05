@@ -290,6 +290,7 @@ a5.Package('a5.cl')
 		proto._cl_viewDefComplete = function(view){
 			if (this._cl_viewDefCallback)
 				this._cl_viewDefCallback.call(this._cl_viewDefCallbackScope, view);
+			this._cl_viewReady();
 		}
 		
 		proto._cl_viewReady = function(){

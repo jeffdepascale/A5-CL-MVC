@@ -33,8 +33,8 @@ a5.Package('a5.cl.mvc.core')
 		var updateResize = function($directRequest){
 			var directRequest = $directRequest === true ? true:false;
 			var elem = null;
-			if (document.body && document.body.clientHeight) elem = document.body;
-			else if (document.documentElement && document.documentElement.clientHeight) elem = document.documentElement;
+			if (document.documentElement && document.documentElement.clientHeight) elem = document.documentElement;
+			else if (document.body && document.body.clientHeight) elem = document.body;
 			if (elem) {
 				_windowProps.height = elem.clientHeight;
 				_windowProps.width = elem.clientWidth;
@@ -60,7 +60,7 @@ a5.Package('a5.cl.mvc.core')
 			if (directRequest) {
 				return _windowProps;
 			} else {
-				cls.cl().MVC()._mvc_redrawEngine().triggerAppRedraw(true);
+				cls.cl().MVC().redrawEngine().triggerAppRedraw(true);
 			}
 		}
 		
