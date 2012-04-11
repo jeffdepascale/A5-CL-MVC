@@ -17,7 +17,7 @@ a5.Package('a5.cl')
 	 	 * @function
 		 */
 		
-		this.Properties = function(){
+		this.Properties(function(){
 			this._cl_pendingWrapperProps = {};
 			this._cl_currentWrapperProps = {};
 			this._cl_handleAnchors = false;
@@ -25,9 +25,10 @@ a5.Package('a5.cl')
 			this._cl_scrollWidth = null;
 			this._cl_scrollHeight = null;
 			this._cl_cachedHTML = null;
+			this._cl_loadURL = null;
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
-		};
+		});
 		
 		proto.CLHTMLView = function(html){
 			proto.superclass(this);
@@ -177,6 +178,18 @@ a5.Package('a5.cl')
 			}
 			this._cl_replaceNodeValue(this._cl_viewElement, value);
 			return this;
+		}
+		
+		proto.loadURL = function(url){
+			if (typeof url == 'string') {
+				this._cl_loadURL = url;
+				var self = this;
+				this.cl().include(url, function(value){
+					self.drawHTML(value);
+				})
+				return this;
+			}
+			return this._cl_loadURL;
 		}
 		
 		/**

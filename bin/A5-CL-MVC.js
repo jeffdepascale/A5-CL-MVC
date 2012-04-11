@@ -754,7 +754,7 @@ a5.Package("a5.cl")
 		 * @name index
 		 */
 		proto.index = function(){
-			return this._cl_viewElement.style.zIndex;
+			return parseInt(this._cl_viewElement.style.zIndex);
 		}
 		
 		/**
@@ -1676,8 +1676,8 @@ a5.Package('a5.cl.mvc.core')
 		var updateResize = function($directRequest){
 			var directRequest = $directRequest === true ? true:false;
 			var elem = null;
-			if (document.body && document.body.clientHeight) elem = document.body;
-			else if (document.documentElement && document.documentElement.clientHeight) elem = document.documentElement;
+			if (document.documentElement && document.documentElement.clientHeight) elem = document.documentElement;
+			else if (document.body && document.body.clientHeight) elem = document.body;
 			if (elem) {
 				_windowProps.height = elem.clientHeight;
 				_windowProps.width = elem.clientWidth;
@@ -1703,7 +1703,7 @@ a5.Package('a5.cl.mvc.core')
 			if (directRequest) {
 				return _windowProps;
 			} else {
-				cls.cl().MVC()._mvc_redrawEngine().triggerAppRedraw(true);
+				cls.cl().MVC().redrawEngine().triggerAppRedraw(true);
 			}
 		}
 		
@@ -1860,7 +1860,7 @@ a5.Package('a5.cl.core.viewDef')
 			var attributes = value.split('|'),
 				json = window.JSON || a5.cl.core.JSON,
 			//regex for detecting strict typing
-				typeFlags = /{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
+				typeFlags = /{RegExp}|{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
 			//loop through each attribute value and process it
 				processed = [],
 				x, y, attr, type;
@@ -1888,6 +1888,10 @@ a5.Package('a5.cl.core.viewDef')
 						break;
 					case '{Namespace}': //resolve namespace
 						processed.push(a5.GetNamespace(attr, this._cl_imports));
+						break;
+					case '{RegExp}': // resolve regexp
+						var split = attr.split('/');
+						processed.push(new RegExp(split[1], split[2]));
 						break;
 					default: //try to guess by default
 						if(!isNaN(attr)) //check if it's a number
@@ -2406,16 +2410,17 @@ a5.Package("a5.cl.mvc.core")
 		this.addAppFilters = function($filters){
 			var placeHolderIndex;
 			for(var i = 0, l=filters.length; i<l; i++){
-				if(mappings[i] === '_cl_appPlaceholder'){
+				if(filters[i] === '_cl_appPlaceholder'){
 					placeHolderIndex = i;
 					filters.splice(i, 1);
 					break;	
 				}
 			}
-			for (var i = 0, l=$filters.length; i < l; i++){
-				this.addFilter($filters[i], placeHolderIndex);
-				placeHolderIndex++;
-			}
+			if($filters)
+				for (var i = 0, l=$filters.length; i < l; i++){
+					this.addFilter($filters[i], placeHolderIndex);
+					placeHolderIndex++;
+				}
 		}
 	
 		this.test = function(loading, unloading, callback){
@@ -2572,15 +2577,16 @@ a5.Package('a5.cl.mvc.core')
 					break;	
 				}
 			}
-			for (var i = 0, l=$mappings.length; i < l; i++){
-				if(typeof $mappings[i].desc === 'number'){
-					this.addMapping($mappings[i], errorPlaceHolderIndex);
-					errorPlaceHolderIndex++;
-				} else {
-					this.addMapping($mappings[i], placeHolderIndex);
-					placeHolderIndex++;
+			if($mappings)
+				for (var i = 0, l=$mappings.length; i < l; i++){
+					if(typeof $mappings[i].desc === 'number'){
+						this.addMapping($mappings[i], errorPlaceHolderIndex);
+						errorPlaceHolderIndex++;
+					} else {
+						this.addMapping($mappings[i], placeHolderIndex);
+						placeHolderIndex++;
+					}
 				}
-			}
 		}
 		
 		this.getCallSignature = function(hashArray){
@@ -2775,7 +2781,7 @@ a5.Package('a5.cl')
 	 	 * @function
 		 */
 		
-		this.Properties = function(){
+		this.Properties(function(){
 			this._cl_pendingWrapperProps = {};
 			this._cl_currentWrapperProps = {};
 			this._cl_handleAnchors = false;
@@ -2783,9 +2789,10 @@ a5.Package('a5.cl')
 			this._cl_scrollWidth = null;
 			this._cl_scrollHeight = null;
 			this._cl_cachedHTML = null;
+			this._cl_loadURL = null;
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
-		};
+		});
 		
 		proto.CLHTMLView = function(html){
 			proto.superclass(this);
@@ -2935,6 +2942,18 @@ a5.Package('a5.cl')
 			}
 			this._cl_replaceNodeValue(this._cl_viewElement, value);
 			return this;
+		}
+		
+		proto.loadURL = function(url){
+			if (typeof url == 'string') {
+				this._cl_loadURL = url;
+				var self = this;
+				this.cl().include(url, function(value){
+					self.drawHTML(value);
+				})
+				return this;
+			}
+			return this._cl_loadURL;
 		}
 		
 		/**
@@ -4238,6 +4257,7 @@ a5.Package('a5.cl')
 		proto._cl_viewDefComplete = function(view){
 			if (this._cl_viewDefCallback)
 				this._cl_viewDefCallback.call(this._cl_viewDefCallbackScope, view);
+			this._cl_viewReady();
 		}
 		
 		proto._cl_viewReady = function(){
@@ -4251,6 +4271,7 @@ a5.Package('a5.cl')
 			
 		}
 });
+
 
 
 /**
@@ -4433,7 +4454,8 @@ a5.Package("a5.cl")
 
 
 a5.Package('a5.cl.plugins.hashManager')
-
+	
+	.Import('a5.cl.CLEvent')
 	.Extends('a5.cl.CLPlugin')
 	.Class('HashManager', 'singleton final', function(cls, im, HashManager){
 
@@ -4635,7 +4657,7 @@ a5.Package('a5.cl.mvc')
 		this.locationManager = function(){ return _locationManager; }
 		this.garbageCollector = function(){return _garbageCollector;}
 		this.envManager = function(){ return _envManager; }
-		this._mvc_redrawEngine = function(){ return _redrawEngine; }
+		this.triggerAppRedraw = function(){ this.redrawEngine().triggerAppRedraw(); }
 		
 		/**
 		 * Adds a filter test case to the filters list.
@@ -4707,11 +4729,9 @@ a5.Package('a5.cl.mvc')
 		
 		var eApplicationPreparedHandler = function(){
 			var $filters = cls.getMainConfigProps('filters');
-			if($filters) 
-				_filters.addAppFilters($filters);
+			_filters.addAppFilters($filters);
 			var $mappings = cls.getMainConfigProps('mappings');
-			if ($mappings)
-					_mappings.addAppMappings($mappings);
+			_mappings.addAppMappings($mappings);
 		}
 		
 		/**
@@ -4840,11 +4860,15 @@ a5.Package('a5.cl.mvc')
 			var windowReady = function(){
 				if (_window) 
 					cls.application().rootWindowLoaded(_window);
-				cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
+				if(isAsync)
+					cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
 			if (cfg.rootController) {
-				controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
+				if(cfg.rootController.indexOf('.') !== -1)
+					controller = cls.create(a5.GetNamespace(cfg.rootController));
+				else	
+					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
 					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
 					return;
@@ -4869,7 +4893,7 @@ a5.Package('a5.cl.mvc')
 			cls.addMapping({desc:'/', controller:controllerNS}, true);
 			if (cfg.rootViewDef) {
 				controller.defaultViewDefinition(cfg.rootViewDef);
-				isAsync = true;
+				isAsync = !(/<.+>/.test(cfg.rootViewDef));
 				controller.generateView(function(view){
 					_window = view;
 					windowViewLoaded();
@@ -4878,6 +4902,7 @@ a5.Package('a5.cl.mvc')
 			return isAsync;
 		}
 })
+
 
 
 })(a5);
