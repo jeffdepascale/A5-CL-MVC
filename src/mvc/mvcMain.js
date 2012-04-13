@@ -15,6 +15,7 @@ a5.Package('a5.cl.mvc')
 		_garbageCollector,
 		_envManager,
 		_window,
+		isFirstRender = true,
 		controller;
 		
 		cls.MVC = function(){
@@ -193,20 +194,22 @@ a5.Package('a5.cl.mvc')
 			if(data.controller instanceof a5.cl.CLController)
 				newController = data.controller;
 			else
-				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller);
+				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller, true);
 			if(!newController){
 				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
 				return;
 			}
 			
-			if(newController._cl_mappable){
-				if (typeof newController[action] === 'function'){
-					newController[action].apply(newController, (data.id || []));
-				} else {
-					cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
-				}
+			if(!newController._cl_mappable)
+				newController.setMappable();
+			if (typeof newController[action] === 'function'){
+				newController[action].apply(newController, (data.id || []));
 			} else {
-				cls.redirect(500, 'Error executing mapping on controller "' + data.controller + '", setMappable method must be called on controller in constructor.');
+				cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
+			}
+			if (isFirstRender) {
+				isFirstRender = false;
+				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
 		}	
 		

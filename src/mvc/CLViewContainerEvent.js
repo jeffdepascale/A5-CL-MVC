@@ -7,6 +7,8 @@ a5.Package('a5.cl.mvc')
 
 	.Extends('a5.Event')
 	.Static(function(CLViewContainerEvent){
+		
+		CLViewContainerEvent.CHILDREN_READY = 'childrenReady';
 		/**
 		 * @event
 		 * @name a5.cl.mvc.CLViewContainerEvent#LOADER_STATE_CHANGE

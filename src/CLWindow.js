@@ -40,15 +40,11 @@ a5.Package('a5.cl')
 		 * @name application
 		 */
 		proto.application = function(){
-			return this.cl().application();
+			return this.MVC().application();
 		}
 		
 		proto.Override.moveToParentView = function(view){
 			this.throwError('moveToParentView is not a valid manipulation method on a5.cl.CLWindow.');
-		}
-
-		proto.Override.removeFromParentView = function(){
-			this.cl().application().removeWindow(this);
 		}
 		
 		/**

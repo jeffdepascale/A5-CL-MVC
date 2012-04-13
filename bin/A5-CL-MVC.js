@@ -32,12 +32,33 @@ a5.Package('a5.cl')
 
 /**
  * @class 
+ * @name a5.cl.mvc.CLViewEvent
+ */
+a5.Package('a5.cl.mvc')
+
+	.Extends('a5.Event')
+	.Static(function(CLViewEvent){
+		
+		CLViewEvent.VIEW_READY = 'clViewReady';
+	})
+	.Prototype('CLViewEvent', function(proto){
+		
+		proto.CLViewEvent = function(){
+			proto.superclass(this);
+		}	
+});
+
+
+/**
+ * @class 
  * @name a5.cl.mvc.CLViewContainerEvent
  */
 a5.Package('a5.cl.mvc')
 
 	.Extends('a5.Event')
 	.Static(function(CLViewContainerEvent){
+		
+		CLViewContainerEvent.CHILDREN_READY = 'childrenReady';
 		/**
 		 * @event
 		 * @name a5.cl.mvc.CLViewContainerEvent#LOADER_STATE_CHANGE
@@ -317,22 +338,20 @@ a5.Package('a5.cl.mvc.core')
 		}
 })
 
-
 a5.Package('a5.cl.mvc.core')
 	
-	.Import('a5.cl.CLViewContainer')
-	
-	.Extends('CLViewContainer')
+	.Extends('a5.cl.CLViewContainer')
 	.Prototype('AppViewContainer', 'singleton final', function(proto, im){
 		
 		proto.AppViewContainer = function(){
 			proto.superclass(this);
 			this._cl_errorStopped = false;
-			this._cl_systemWindowContainer = this.create('a5.cl.core.WindowContainer');
+			this._cl_systemWindowContainer = this.create(im.WindowContainer);
 			this._cl_systemWindowContainer.hide();
-			this._cl_appWindowContainer = this.create('a5.cl.core.WindowContainer');
+			this._cl_appWindowContainer = this.create(im.WindowContainer);
+			this._cl_appWindowContainer.hide();
 			this._cl_appWindowContainer.showOverflow(true);
-			this._cl_levelObjs = { system:null, alert:null, context:null, modal:null};
+			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
 			this.showOverflow(true);
 			this._cl_addedToTree();
 		}
@@ -354,38 +373,38 @@ a5.Package('a5.cl.mvc.core')
 			if (!this._cl_errorStopped){
 				if (window instanceof a5.cl.CLWindow) {
 					var lev = a5.cl.CLWindowLevel,
-						levObj = this._cl_levelObjs,
-						add = true,
-						index = 0;
-					switch (window._cl_windowLevel) {
-						case lev.SYSTEM:
-							if(levObj.system && levObj.system.blocking()){
-								this.throwError('system window blocking error');
-								return;
-							}
-							if(levObj.system)
-								this._cl_systemWindowContainer.replaceViewAtIndex(window, 0);
+						newWinLevel = window._cl_windowLevel;
+					if (newWinLevel === lev.SYSTEM){
+						var count = this._cl_systemWindowContainer.subViewCount();
+						if(count > 0){
+							if(this._cl_systemWindowContainer.subViewAtIndex(0).blocking())
+								return this.throwError('system window blocking error');
 							else
+								this._cl_systemWindowContainer.replaceViewAtIndex(window, 0);
+						} else {
 								this._cl_systemWindowContainer.addSubView(window);
-							this._cl_systemWindowContainer.show();
-							levObj.system = window;
-							add = false;
-							break;
-						case lev.ALERT:
-							levObj.alert = window;
-							index = 3;
-							break;
-						case lev.CONTEXT:
-							levObj.context = window;
-							index = 2;
-							break;
-						case lev.MODAL:
-							levObj.modal = window;
-							index = 1;
-							break;
+						}
+						this._cl_systemWindowContainer.show();
+					} else {
+						var container = this._cl_appWindowContainer,
+							index = 0,
+							isReplace = false;
+						if(container.containsSubView(window))
+							container.removeSubView(window, false);
+						for (var i = 0, l = container.subViewCount(); i < l; i++) {
+							var checkedWin = container.subViewAtIndex(i);
+							if (checkedWin._cl_windowLevel === lev.APPLICATION) {
+								index = i + 1;
+							} else if (checkedWin._cl_windowLevel === newWinLevel) {
+								index = i;
+								isReplace = true;
+							}
+						}
+						if((newWinLevel === lev.APPLICATION || container.subViewCount() === 0) || !isReplace)
+							this._cl_appWindowContainer.addSubViewAtIndex(window, index);
+						else
+							this._cl_appWindowContainer.replaceViewAtIndex(window, index);
 					}
-					if(add)
-						this._cl_appWindowContainer.addSubViewAtIndex(window, index);
 				} else {
 					self.redirect(500, 'Application addSubView only accepts views that subclass a5.cl.CLWindow');
 				}	
@@ -404,6 +423,11 @@ a5.Package('a5.cl.mvc.core')
 				} 
 			}
 		}
+		
+		proto._cl_initialRenderCompete = function(){
+			this._cl_appWindowContainer.show();
+			this.superclass().removeSubView.call(this, this._cl_appWindowLoadingContainer);
+		}
 
 		proto.Override.viewReady = function(){}
 		
@@ -416,7 +440,7 @@ a5.Package('a5.cl.mvc.core')
 		}
 		
 		proto.Override._cl_redraw = function(force){
-			var sysWin = this._cl_levelObjs.system,
+			var sysWin = this._cl_systemWindowContainer.subViewAtIndex(0),
 				offset = null;
 			if (sysWin && sysWin.offsetsApplication() !== a5.cl.mvc.core.SystemWindow.OFFSET_NONE) {
 				didRedrawSysWin = true;
@@ -441,24 +465,8 @@ a5.Package('a5.cl.mvc.core')
 			this._cl_appWindowContainer._cl_redraw(force);
 		}
 		
-		proto.Override._cl_orderChildren = function(){
-			proto.superclass()._cl_orderChildren.apply(this, arguments);
-			var levs = this._cl_levelObjs;
-			var top = this.subViewCount();
-			if(levs.modal)		levs.modal._cl_setIndex(top + 1);
-			if(levs.context)	levs.context._cl_setIndex(top + 2);
-			if(levs.alert) 		levs.alert._cl_setIndex(top + 3);
-			if(levs.system) 	levs.system._cl_setIndex(top + 4);
-		}
-		
 		proto.Override.redraw = function(){
 			this.cl().MVC().redrawEngine().attemptRedraw(this);
-		}
-		
-		proto.Override.viewRemoved = function(view){
-			for(var prop in this._cl_levelObjs)
-				if(this._cl_levelObjs[prop] == view)
-					this._cl_levelObjs[prop] = null;
 		}
 		
 		proto.Override.draw = function(){
@@ -472,21 +480,22 @@ a5.Package('a5.cl.mvc.core')
 			body.appendChild(this._cl_viewElement);
 			this._cl_viewElement.style.display = 'block';
 			proto.superclass().addSubView.call(this, this._cl_appWindowContainer);
+			proto.superclass().addSubView.call(this, this._cl_appWindowLoadingContainer);
 			proto.superclass().addSubView.call(this, this._cl_systemWindowContainer);
 		}
 	
 });
 
-a5.Package('a5.cl.core')
+a5.Package('a5.cl.mvc.core')
 	
 	.Extends('a5.cl.CLViewContainer')
-	.Class('WindowContainer', function(self, im){
+	.Class('WindowContainer', function(cls, im){
 		
-		self.WindowContainer = function(){
-			self.superclass(this);
-		}		
-})
-
+		cls.WindowContainer = function(){
+			cls.superclass(this);
+		}
+		
+});
 
 
 a5.Package('a5.cl.mvc.core')
@@ -538,7 +547,8 @@ a5.Package('a5.cl.mvc.core')
  */
 a5.Package("a5.cl")
 	
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.mvc.CLViewEvent')
 	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
 		
@@ -1148,6 +1158,7 @@ a5.Package("a5.cl")
 		 */
 		proto.viewReady = function(){
 			this._cl_viewIsReady = true;
+			this.dispatchEvent(this.create(im.CLViewEvent, [im.CLViewEvent.VIEW_READY]));
 		}
 		
 		proto.viewIsReady = function(){
@@ -1167,8 +1178,8 @@ a5.Package("a5.cl")
 		/**
 		 * @name removeFromPaentView
 		 */
-		proto.removeFromParentView = function(){
-			if (this._cl_parentView) this._cl_parentView.removeSubView(this);
+		proto.removeFromParentView = function($shouldDestroy){
+			if (this._cl_parentView) this._cl_parentView.removeSubView(this, $shouldDestroy);
 		}
 		
 		/**
@@ -2532,15 +2543,17 @@ a5.Package('a5.cl.mvc.core')
 		
 		this.addMapping = function(mappingObj, $append){
 			var append = $append || false,
-				controller = im.Instantiator.instance().getClassInstance('Controller', mappingObj.controller, true);
-			if(!(controller instanceof a5.cl.CLController)){
-				this.throwError('Unable to instantiate the controller ' + mappingObj.controller);
-				return;
-			} else if(controller.instanceCount() > 1) {
-				this.throwError('Cannot add a mapping to a controller with multiple instances (' + controller.namespace() + ').');
-				return
+				controller = mappingObj.controller ? im.Instantiator.instance().getClassInstance('Controller', mappingObj.controller, true):null;
+			if(controller){
+				if (!(controller instanceof a5.cl.CLController)) {
+					this.throwError('Unable to instantiate the controller ' + mappingObj.controller);
+					return;
+				} else if (controller.instanceCount() > 1) {
+					this.throwError('Cannot add a mapping to a controller with multiple instances (' + controller.namespace() + ').');
+					return;
+				}
+				controller.setMappable();
 			}
-			controller._cl_setMappable();
 			
 			if (typeof mappingObj.desc === 'number') {
 				if (mappingObj.controller) {
@@ -3127,7 +3140,8 @@ a5.Package('a5.cl')
  */
 a5.Package('a5.cl')
 	.Extends('CLView')
-	.Import('a5.ContractAttribute')
+	.Import('a5.ContractAttribute',
+			'a5.cl.mvc.CLViewContainerEvent')
 	.Static(function(CLViewContainer){
 		CLViewContainer.redrawLog = {};
 		
@@ -3397,7 +3411,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_addChildView = function(view, $index, callback){
 			if (!this._cl_lockedVal) {
-				if(!(this instanceof a5.cl.core.WindowContainer) && view instanceof a5.cl.CLWindow){
+				if(!(this instanceof a5.cl.mvc.core.WindowContainer) && view instanceof a5.cl.CLWindow){
 					this.throwError('Cannot add a CLWindow to a generic view container.');
 					return;
 				}
@@ -3820,7 +3834,9 @@ a5.Package('a5.cl')
 		 * Note that this method will only be called if this view was generated from a view definition.
 		 * @param {Boolean} initialCall  
 		 */
-		proto.childrenReady = function(initialCall){};
+		proto.childrenReady = function(initialCall){
+			this.dispatchEvent(im.CLViewContainerEvent.CHILDREN_READY);
+		};
 		
 		/**
 		 * Called when a view is about to be added to the view container.
@@ -3894,15 +3910,11 @@ a5.Package('a5.cl')
 		 * @name application
 		 */
 		proto.application = function(){
-			return this.cl().application();
+			return this.MVC().application();
 		}
 		
 		proto.Override.moveToParentView = function(view){
 			this.throwError('moveToParentView is not a valid manipulation method on a5.cl.CLWindow.');
-		}
-
-		proto.Override.removeFromParentView = function(){
-			this.cl().application().removeWindow(this);
 		}
 		
 		/**
@@ -4107,10 +4119,16 @@ a5.Package('a5.cl')
 			
 			this.generateView(function(rootView){
 				target = this._cl_renderTarget || rootView;
+				if(view instanceof a5.cl.CLWindow)
+					target = a5.cl.mvc.core.AppViewContainer.instance();
 				if(view instanceof a5.cl.CLView){
 					if (!target.containsSubView(view)) {
-						target.removeAllSubViews(false);
-						target.addSubView(view);
+						if (!(target instanceof a5.cl.mvc.core.AppViewContainer)) {
+							target.removeAllSubViews(false);
+							target.addSubView(view);
+						} else {
+							target.addWindow(view);
+						}
 					}
 					this._cl_renderComplete(callback);
 				} else if(view instanceof CLController){
@@ -4238,7 +4256,9 @@ a5.Package('a5.cl')
 		/**
 		 * @name setMappable
 		 */
-		proto._cl_setMappable = function(){
+		proto.setMappable = function(){
+			if(CLController.instanceCount() > 1)
+				return this.throwError('Cannot call setMappable on a controller with multiple instances.');
 			this._cl_mappable = true;
 		}
 		
@@ -4628,6 +4648,7 @@ a5.Package('a5.cl.mvc')
 		_garbageCollector,
 		_envManager,
 		_window,
+		isFirstRender = true,
 		controller;
 		
 		cls.MVC = function(){
@@ -4806,20 +4827,22 @@ a5.Package('a5.cl.mvc')
 			if(data.controller instanceof a5.cl.CLController)
 				newController = data.controller;
 			else
-				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller);
+				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller, true);
 			if(!newController){
 				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
 				return;
 			}
 			
-			if(newController._cl_mappable){
-				if (typeof newController[action] === 'function'){
-					newController[action].apply(newController, (data.id || []));
-				} else {
-					cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
-				}
+			if(!newController._cl_mappable)
+				newController.setMappable();
+			if (typeof newController[action] === 'function'){
+				newController[action].apply(newController, (data.id || []));
 			} else {
-				cls.redirect(500, 'Error executing mapping on controller "' + data.controller + '", setMappable method must be called on controller in constructor.');
+				cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
+			}
+			if (isFirstRender) {
+				isFirstRender = false;
+				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
 		}	
 		
