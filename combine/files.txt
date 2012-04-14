@@ -1,4 +1,5 @@
 src/CLMVCBase.js
+src/mvc/InferRenderAttribute.js
 src/mvc/CLViewEvent.js
 src/mvc/CLViewContainerEvent.js
 src/mvc/core/RedrawEngine.js

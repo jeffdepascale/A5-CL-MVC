@@ -11,6 +11,8 @@ a5.Package('a5.cl')
 	.Mix('a5.cl.mixins.Binder')
 	.Prototype('CLController', function(proto, im, CLController){
 		
+		CLController.ASSUME_XML_VIEW = 'clControllerAssumeXMLView'
+		
 		this.Properties(function(){
 			this._cl_view = null;
 			this._cl_mappable = false;
@@ -40,7 +42,10 @@ a5.Package('a5.cl')
 			}
 			
 			proto.superclass(this);
-			if (typeof defaultView === 'string') {
+			this._cl_setMVCName(this.className().replace('Controller', ''));
+			if (defaultView === CLController.ASSUME_XML_VIEW) {
+				this.defaultViewDefinition(CLController.ASSUME_XML_VIEW);
+			} else if (typeof defaultView === 'string') {
 				this.defaultViewDefinition(defaultView);
 			} else if (defaultView instanceof a5.cl.CLView) {
 				this._cl_viewCreated(defaultView);
@@ -95,13 +100,13 @@ a5.Package('a5.cl')
 						isAssumed = false,
 						self = this;
 					if (this._cl_defaultViewDef) {
-						url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
-					} else {
-						isAssumed = true;
-						url = this.config().applicationViewPath + this.className().replace('Controller', '') + '.xml';
-					}	
-					
-					
+						if (this._cl_defaultViewDef === CLController.ASSUME_XML_VIEW) {
+							isAssumed = true;
+							url = this.config().applicationViewPath + this.mvcName() + '.xml';
+						} else {
+							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
+						}
+					}					
 					this.cl().include(url, function(xml){
 						self._cl_buildViewDef(xml, callback, scope);
 					}, null, function(e){
