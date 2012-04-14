@@ -19,15 +19,17 @@ a5.Package('a5.cl.mvc.core')
 		
 		this.addMapping = function(mappingObj, $append){
 			var append = $append || false,
-				controller = im.Instantiator.instance().getClassInstance('Controller', mappingObj.controller, true);
-			if(!(controller instanceof a5.cl.CLController)){
-				this.throwError('Unable to instantiate the controller ' + mappingObj.controller);
-				return;
-			} else if(controller.instanceCount() > 1) {
-				this.throwError('Cannot add a mapping to a controller with multiple instances (' + controller.namespace() + ').');
-				return
+				controller = mappingObj.controller ? im.Instantiator.instance().getClassInstance('Controller', mappingObj.controller, true):null;
+			if(controller){
+				if (!(controller instanceof a5.cl.CLController)) {
+					this.throwError('Unable to instantiate the controller ' + mappingObj.controller);
+					return;
+				} else if (controller.instanceCount() > 1) {
+					this.throwError('Cannot add a mapping to a controller with multiple instances (' + controller.namespace() + ').');
+					return;
+				}
+				controller.setMappable();
 			}
-			controller._cl_setMappable();
 			
 			if (typeof mappingObj.desc === 'number') {
 				if (mappingObj.controller) {

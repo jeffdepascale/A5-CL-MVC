@@ -6,7 +6,8 @@
  */
 a5.Package('a5.cl')
 	.Extends('CLView')
-	.Import('a5.ContractAttribute')
+	.Import('a5.ContractAttribute',
+			'a5.cl.mvc.CLViewContainerEvent')
 	.Static(function(CLViewContainer){
 		CLViewContainer.redrawLog = {};
 		
@@ -276,7 +277,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_addChildView = function(view, $index, callback){
 			if (!this._cl_lockedVal) {
-				if(!(this instanceof a5.cl.core.WindowContainer) && view instanceof a5.cl.CLWindow){
+				if(!(this instanceof a5.cl.mvc.core.WindowContainer) && view instanceof a5.cl.CLWindow){
 					this.throwError('Cannot add a CLWindow to a generic view container.');
 					return;
 				}
@@ -699,7 +700,9 @@ a5.Package('a5.cl')
 		 * Note that this method will only be called if this view was generated from a view definition.
 		 * @param {Boolean} initialCall  
 		 */
-		proto.childrenReady = function(initialCall){};
+		proto.childrenReady = function(initialCall){
+			this.dispatchEvent(im.CLViewContainerEvent.CHILDREN_READY);
+		};
 		
 		/**
 		 * Called when a view is about to be added to the view container.

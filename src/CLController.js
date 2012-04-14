@@ -140,10 +140,16 @@ a5.Package('a5.cl')
 			
 			this.generateView(function(rootView){
 				target = this._cl_renderTarget || rootView;
+				if(view instanceof a5.cl.CLWindow)
+					target = a5.cl.mvc.core.AppViewContainer.instance();
 				if(view instanceof a5.cl.CLView){
 					if (!target.containsSubView(view)) {
-						target.removeAllSubViews(false);
-						target.addSubView(view);
+						if (!(target instanceof a5.cl.mvc.core.AppViewContainer)) {
+							target.removeAllSubViews(false);
+							target.addSubView(view);
+						} else {
+							target.addWindow(view);
+						}
 					}
 					this._cl_renderComplete(callback);
 				} else if(view instanceof CLController){
@@ -271,7 +277,9 @@ a5.Package('a5.cl')
 		/**
 		 * @name setMappable
 		 */
-		proto._cl_setMappable = function(){
+		proto.setMappable = function(){
+			if(CLController.instanceCount() > 1)
+				return this.throwError('Cannot call setMappable on a controller with multiple instances.');
 			this._cl_mappable = true;
 		}
 		

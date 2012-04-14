@@ -1,19 +1,17 @@
-
 a5.Package('a5.cl.mvc.core')
 	
-	.Import('a5.cl.CLViewContainer')
-	
-	.Extends('CLViewContainer')
+	.Extends('a5.cl.CLViewContainer')
 	.Prototype('AppViewContainer', 'singleton final', function(proto, im){
 		
 		proto.AppViewContainer = function(){
 			proto.superclass(this);
 			this._cl_errorStopped = false;
-			this._cl_systemWindowContainer = this.create('a5.cl.core.WindowContainer');
+			this._cl_systemWindowContainer = this.create(im.WindowContainer);
 			this._cl_systemWindowContainer.hide();
-			this._cl_appWindowContainer = this.create('a5.cl.core.WindowContainer');
+			this._cl_appWindowContainer = this.create(im.WindowContainer);
+			this._cl_appWindowContainer.hide();
 			this._cl_appWindowContainer.showOverflow(true);
-			this._cl_levelObjs = { system:null, alert:null, context:null, modal:null};
+			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
 			this.showOverflow(true);
 			this._cl_addedToTree();
 		}
@@ -35,38 +33,38 @@ a5.Package('a5.cl.mvc.core')
 			if (!this._cl_errorStopped){
 				if (window instanceof a5.cl.CLWindow) {
 					var lev = a5.cl.CLWindowLevel,
-						levObj = this._cl_levelObjs,
-						add = true,
-						index = 0;
-					switch (window._cl_windowLevel) {
-						case lev.SYSTEM:
-							if(levObj.system && levObj.system.blocking()){
-								this.throwError('system window blocking error');
-								return;
-							}
-							if(levObj.system)
-								this._cl_systemWindowContainer.replaceViewAtIndex(window, 0);
+						newWinLevel = window._cl_windowLevel;
+					if (newWinLevel === lev.SYSTEM){
+						var count = this._cl_systemWindowContainer.subViewCount();
+						if(count > 0){
+							if(this._cl_systemWindowContainer.subViewAtIndex(0).blocking())
+								return this.throwError('system window blocking error');
 							else
+								this._cl_systemWindowContainer.replaceViewAtIndex(window, 0);
+						} else {
 								this._cl_systemWindowContainer.addSubView(window);
-							this._cl_systemWindowContainer.show();
-							levObj.system = window;
-							add = false;
-							break;
-						case lev.ALERT:
-							levObj.alert = window;
-							index = 3;
-							break;
-						case lev.CONTEXT:
-							levObj.context = window;
-							index = 2;
-							break;
-						case lev.MODAL:
-							levObj.modal = window;
-							index = 1;
-							break;
+						}
+						this._cl_systemWindowContainer.show();
+					} else {
+						var container = this._cl_appWindowContainer,
+							index = 0,
+							isReplace = false;
+						if(container.containsSubView(window))
+							container.removeSubView(window, false);
+						for (var i = 0, l = container.subViewCount(); i < l; i++) {
+							var checkedWin = container.subViewAtIndex(i);
+							if (checkedWin._cl_windowLevel === lev.APPLICATION) {
+								index = i + 1;
+							} else if (checkedWin._cl_windowLevel === newWinLevel) {
+								index = i;
+								isReplace = true;
+							}
+						}
+						if((newWinLevel === lev.APPLICATION || container.subViewCount() === 0) || !isReplace)
+							this._cl_appWindowContainer.addSubViewAtIndex(window, index);
+						else
+							this._cl_appWindowContainer.replaceViewAtIndex(window, index);
 					}
-					if(add)
-						this._cl_appWindowContainer.addSubViewAtIndex(window, index);
 				} else {
 					self.redirect(500, 'Application addSubView only accepts views that subclass a5.cl.CLWindow');
 				}	
@@ -85,6 +83,11 @@ a5.Package('a5.cl.mvc.core')
 				} 
 			}
 		}
+		
+		proto._cl_initialRenderCompete = function(){
+			this._cl_appWindowContainer.show();
+			this.superclass().removeSubView.call(this, this._cl_appWindowLoadingContainer);
+		}
 
 		proto.Override.viewReady = function(){}
 		
@@ -97,7 +100,7 @@ a5.Package('a5.cl.mvc.core')
 		}
 		
 		proto.Override._cl_redraw = function(force){
-			var sysWin = this._cl_levelObjs.system,
+			var sysWin = this._cl_systemWindowContainer.subViewAtIndex(0),
 				offset = null;
 			if (sysWin && sysWin.offsetsApplication() !== a5.cl.mvc.core.SystemWindow.OFFSET_NONE) {
 				didRedrawSysWin = true;
@@ -122,24 +125,8 @@ a5.Package('a5.cl.mvc.core')
 			this._cl_appWindowContainer._cl_redraw(force);
 		}
 		
-		proto.Override._cl_orderChildren = function(){
-			proto.superclass()._cl_orderChildren.apply(this, arguments);
-			var levs = this._cl_levelObjs;
-			var top = this.subViewCount();
-			if(levs.modal)		levs.modal._cl_setIndex(top + 1);
-			if(levs.context)	levs.context._cl_setIndex(top + 2);
-			if(levs.alert) 		levs.alert._cl_setIndex(top + 3);
-			if(levs.system) 	levs.system._cl_setIndex(top + 4);
-		}
-		
 		proto.Override.redraw = function(){
 			this.cl().MVC().redrawEngine().attemptRedraw(this);
-		}
-		
-		proto.Override.viewRemoved = function(view){
-			for(var prop in this._cl_levelObjs)
-				if(this._cl_levelObjs[prop] == view)
-					this._cl_levelObjs[prop] = null;
 		}
 		
 		proto.Override.draw = function(){
@@ -153,17 +140,19 @@ a5.Package('a5.cl.mvc.core')
 			body.appendChild(this._cl_viewElement);
 			this._cl_viewElement.style.display = 'block';
 			proto.superclass().addSubView.call(this, this._cl_appWindowContainer);
+			proto.superclass().addSubView.call(this, this._cl_appWindowLoadingContainer);
 			proto.superclass().addSubView.call(this, this._cl_systemWindowContainer);
 		}
 	
 });
 
-a5.Package('a5.cl.core')
+a5.Package('a5.cl.mvc.core')
 	
 	.Extends('a5.cl.CLViewContainer')
-	.Class('WindowContainer', function(self, im){
+	.Class('WindowContainer', function(cls, im){
 		
-		self.WindowContainer = function(){
-			self.superclass(this);
-		}		
-})
+		cls.WindowContainer = function(){
+			cls.superclass(this);
+		}
+		
+});

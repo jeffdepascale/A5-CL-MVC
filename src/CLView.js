@@ -6,7 +6,8 @@
  */
 a5.Package("a5.cl")
 	
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.mvc.CLViewEvent')
 	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
 		
@@ -616,6 +617,7 @@ a5.Package("a5.cl")
 		 */
 		proto.viewReady = function(){
 			this._cl_viewIsReady = true;
+			this.dispatchEvent(this.create(im.CLViewEvent, [im.CLViewEvent.VIEW_READY]));
 		}
 		
 		proto.viewIsReady = function(){
@@ -635,8 +637,8 @@ a5.Package("a5.cl")
 		/**
 		 * @name removeFromPaentView
 		 */
-		proto.removeFromParentView = function(){
-			if (this._cl_parentView) this._cl_parentView.removeSubView(this);
+		proto.removeFromParentView = function($shouldDestroy){
+			if (this._cl_parentView) this._cl_parentView.removeSubView(this, $shouldDestroy);
 		}
 		
 		/**
