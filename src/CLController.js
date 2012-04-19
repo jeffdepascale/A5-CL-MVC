@@ -314,6 +314,7 @@ a5.Package('a5.cl')
 		}
 		
 		proto.dealloc = function(){
-			
+			if(this.view())
+				this.view().destroy();				
 		}
 });

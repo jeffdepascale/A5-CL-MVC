@@ -9,8 +9,10 @@ a5.Package('a5.cl.mvc')
 		
 		cls.Override.methodPre = function(typeRules, args, scope, method, callback, callOriginator){
 			var name = method.getName(),
-				cls = name.substr(0, 1).toUpperCase() + name.substr(1) + typeRules[0].type ? typeRules[0].type : 'Controller';
-			scope.render(typeRules[0].im[cls].instance(true, args));
+				cls = name.substr(0, 1).toUpperCase() + name.substr(1) + 'Controller';
+			var clr = typeRules[0].im[cls].instance(true);
+			clr.index.apply(clr, args);
+			scope.render(clr);
 			return a5.Attribute.SUCCESS;
 		}
 		
