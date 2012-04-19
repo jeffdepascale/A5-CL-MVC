@@ -590,7 +590,7 @@ a5.Package('a5.cl')
 				}
 				
 				if ('ontouchstart' in window) {
-					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
+					var prop = a5.cl.core.Utils.getCSSProp('overflowScrolling');
 					if (prop) 
 						this._cl_pendingViewElementProps[prop] = 'touch';
 				}
