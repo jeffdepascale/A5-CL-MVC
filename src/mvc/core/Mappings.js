@@ -39,7 +39,8 @@ a5.Package('a5.cl.mvc.core')
 			} else {
 				if (typeof mappingObj.desc === 'string') {
 					mappingObj.desc = mappingObj.desc.split('/');
-					mappingObj.desc.shift();
+					if(mappingObj.desc[0] === "")
+						mappingObj.desc.shift();
 				} else {
 					self.throwError('invalid mapping: "desc" param must be a string');
 				}

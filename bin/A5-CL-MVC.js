@@ -29,6 +29,26 @@ a5.Package('a5.cl')
 })
 
 
+a5.Package('a5.cl.mvc')
+
+	.Extends('a5.Attribute')
+	.Class('InferRenderAttribute', function(cls){
+		
+		cls.InferRenderAttribute = function(){
+			cls.superclass(this);
+		}
+		
+		cls.Override.methodPre = function(typeRules, args, scope, method, callback, callOriginator){
+			var name = method.getName(),
+				cls = name.substr(0, 1).toUpperCase() + name.substr(1) + 'Controller';
+			var clr = typeRules[0].im[cls].instance(true);
+			clr.index.apply(clr, args);
+			scope.render(clr);
+			return a5.Attribute.SUCCESS;
+		}
+		
+	})
+
 
 /**
  * @class 
@@ -341,6 +361,17 @@ a5.Package('a5.cl.mvc.core')
 a5.Package('a5.cl.mvc.core')
 	
 	.Extends('a5.cl.CLViewContainer')
+	.Class('WindowContainer', function(cls, im){
+		
+		cls.WindowContainer = function(){
+			cls.superclass(this);
+		}
+		
+});
+
+a5.Package('a5.cl.mvc.core')
+	
+	.Extends('a5.cl.CLViewContainer')
 	.Prototype('AppViewContainer', 'singleton final', function(proto, im){
 		
 		proto.AppViewContainer = function(){
@@ -484,17 +515,6 @@ a5.Package('a5.cl.mvc.core')
 			proto.superclass().addSubView.call(this, this._cl_systemWindowContainer);
 		}
 	
-});
-
-a5.Package('a5.cl.mvc.core')
-	
-	.Extends('a5.cl.CLViewContainer')
-	.Class('WindowContainer', function(cls, im){
-		
-		cls.WindowContainer = function(){
-			cls.superclass(this);
-		}
-		
 });
 
 
@@ -3724,7 +3744,7 @@ a5.Package('a5.cl')
 				}
 				
 				if ('ontouchstart' in window) {
-					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
+					var prop = a5.cl.core.Utils.getCSSProp('overflowScrolling');
 					if (prop) 
 						this._cl_pendingViewElementProps[prop] = 'touch';
 				}
@@ -3990,6 +4010,8 @@ a5.Package('a5.cl')
 	.Mix('a5.cl.mixins.Binder')
 	.Prototype('CLController', function(proto, im, CLController){
 		
+		CLController.ASSUME_XML_VIEW = 'clControllerAssumeXMLView'
+		
 		this.Properties(function(){
 			this._cl_view = null;
 			this._cl_mappable = false;
@@ -4019,7 +4041,10 @@ a5.Package('a5.cl')
 			}
 			
 			proto.superclass(this);
-			if (typeof defaultView === 'string') {
+			this._cl_setMVCName(this.className().replace('Controller', ''));
+			if (defaultView === CLController.ASSUME_XML_VIEW) {
+				this.defaultViewDefinition(CLController.ASSUME_XML_VIEW);
+			} else if (typeof defaultView === 'string') {
 				this.defaultViewDefinition(defaultView);
 			} else if (defaultView instanceof a5.cl.CLView) {
 				this._cl_viewCreated(defaultView);
@@ -4074,13 +4099,13 @@ a5.Package('a5.cl')
 						isAssumed = false,
 						self = this;
 					if (this._cl_defaultViewDef) {
-						url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
-					} else {
-						isAssumed = true;
-						url = this.config().applicationViewPath + this.className().replace('Controller', '') + '.xml';
-					}	
-					
-					
+						if (this._cl_defaultViewDef === CLController.ASSUME_XML_VIEW) {
+							isAssumed = true;
+							url = this.config().applicationViewPath + this.mvcName() + '.xml';
+						} else {
+							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
+						}
+					}					
 					this.cl().include(url, function(xml){
 						self._cl_buildViewDef(xml, callback, scope);
 					}, null, function(e){
@@ -4288,10 +4313,10 @@ a5.Package('a5.cl')
 		}
 		
 		proto.dealloc = function(){
-			
+			if(this.view())
+				this.view().destroy();				
 		}
 });
-
 
 
 /**

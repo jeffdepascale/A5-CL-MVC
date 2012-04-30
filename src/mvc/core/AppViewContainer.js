@@ -1,6 +1,17 @@
 a5.Package('a5.cl.mvc.core')
 	
 	.Extends('a5.cl.CLViewContainer')
+	.Class('WindowContainer', function(cls, im){
+		
+		cls.WindowContainer = function(){
+			cls.superclass(this);
+		}
+		
+});
+
+a5.Package('a5.cl.mvc.core')
+	
+	.Extends('a5.cl.CLViewContainer')
 	.Prototype('AppViewContainer', 'singleton final', function(proto, im){
 		
 		proto.AppViewContainer = function(){
@@ -144,15 +155,4 @@ a5.Package('a5.cl.mvc.core')
 			proto.superclass().addSubView.call(this, this._cl_systemWindowContainer);
 		}
 	
-});
-
-a5.Package('a5.cl.mvc.core')
-	
-	.Extends('a5.cl.CLViewContainer')
-	.Class('WindowContainer', function(cls, im){
-		
-		cls.WindowContainer = function(){
-			cls.superclass(this);
-		}
-		
 });

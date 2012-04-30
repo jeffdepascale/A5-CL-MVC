@@ -83,14 +83,15 @@ a5.Package('a5.cl.core.viewDef')
 						processed.push(new RegExp(split[1], split[2]));
 						break;
 					default: //try to guess by default
-						if(!isNaN(attr)) //check if it's a number
+						if(!isNaN(attr)){ //check if it's a number
 							processed.push(parseFloat(attr));
-						else if(attr === 'true' || attr === 'false') //check if it's a boolean
+						} else if(attr === 'true' || attr === 'false') {//check if it's a boolean
 							processed.push(attr === 'true');
-						else if(/(^\[.*\]$)|(\{.*\})$/.test(attr)) //check if it looks like an object or an array
-							processed.push(json.parse(attr));
-						else //otherwise, force to string
+						} else if(/(^\[.*\]$)|(\{.*\})$/.test(attr)){ //check if it looks like an object or an array
+							try{ processed.push(json.parse(attr)) } catch(e) { processed.push(attr + ''); };
+						} else { //otherwise, force to string
 							processed.push(attr + '');
+						}
 				}
 			}
 			return processed;
