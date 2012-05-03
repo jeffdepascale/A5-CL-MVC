@@ -332,6 +332,7 @@ a5.Package('a5.cl')
 				this.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false, this);
 			} else {
 				this.dispatchEvent('CONTENT_UPDATED');
+				this.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
 				this.htmlUpdated(false);
 			}
 			if (typeof value == 'string') {
