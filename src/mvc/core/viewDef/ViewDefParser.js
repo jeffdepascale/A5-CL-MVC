@@ -45,8 +45,8 @@ a5.Package('a5.cl.core.viewDef')
 		}
 		
 		ViewDefParser.processAttribute = function(value){
-			//first split the value (pipe delimited)
-			var attributes = value.split('|'),
+			//first split the value (pipe delimited) - unless it starts with {Single}
+			var attributes = value.substr(0, 8) == "{Single}" ? [value.substr(8)] : value.split('|'),
 				json = window.JSON || a5.cl.core.JSON,
 			//regex for detecting strict typing
 				typeFlags = /{RegExp}|{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
