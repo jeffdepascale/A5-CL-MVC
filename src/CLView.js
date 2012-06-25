@@ -666,6 +666,8 @@ a5.Package("a5.cl")
 		proto.hide = function(){
 			this._cl_viewElement.style.display = 'none';
 			this._cl_visible = false;
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**
@@ -675,7 +677,8 @@ a5.Package("a5.cl")
 		proto.show = function(){
 			this._cl_viewElement.style.display = this._cl_defaultDisplayStyle;
 			this._cl_visible = true;
-			this.redraw();
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**

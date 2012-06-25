@@ -171,6 +171,9 @@ a5.Package('a5.cl')
 		 * @param {String} value The html to display.
 		 */
 		proto.drawHTML = function(value, data){
+			//coerce value to a space if empty string to deal with errors in node replacement validation
+			if(value === "")
+				value = " ";
 			if(data && typeof data === 'object'){
 				var plgn = this.plugins().getRegisteredProcess('htmlTemplate');
 				if(plgn)
