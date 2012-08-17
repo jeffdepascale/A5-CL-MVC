@@ -55,9 +55,20 @@ a5.Package('a5.cl.mvc.core')
 						i--;
 					}
 				}
+				target.addOneTimeEventListener(a5.Event.DESTROYED, eRedrawerDestroyedHandler);
 				pendingRedrawers.push(target);
 			}
 			attachForAnimCycle();
+		}
+		
+		var eRedrawerDestroyedHandler = function(e){
+			var view = e.target();
+			for(i = 0; i< pendingRedrawers.length; i++){	
+				if (pendingRedrawers[i] == view) {
+					pendingRedrawers.splice(i, 1);
+					return;
+				}
+			}
 		}
 		
 		var attachForAnimCycle = function(){

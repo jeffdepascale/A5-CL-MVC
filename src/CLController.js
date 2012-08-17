@@ -16,6 +16,7 @@ a5.Package('a5.cl')
 		this.Properties(function(){
 			this._cl_view = null;
 			this._cl_mappable = false;
+			this._cl_defaultViewDef = null;
 			this._cl_viewDefDefaults = [];
 			this._cl_viewDefParser = null;
 			this._cl_viewDefCallback = null;
@@ -297,7 +298,12 @@ a5.Package('a5.cl')
 		
 		proto._cl_viewCreated = function(view){
 			this._cl_view = view;
+			view.addOneTimeEventListener(a5.Event.DESTROYED, this._cl_viewDestroyedHandler, false, this);
 			view._cl_controller = this;
+		}
+		
+		proto._cl_viewDestroyedHandler = function(e){
+			this._cl_view = null;
 		}
 		
 		proto._cl_viewDefComplete = function(view){
