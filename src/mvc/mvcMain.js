@@ -105,6 +105,7 @@ a5.Package('a5.cl.mvc')
 			_hash = cls.plugins().HashManager();
 			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
 			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
+			_application.view().initialize();
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
 			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);

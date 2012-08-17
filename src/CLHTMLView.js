@@ -171,6 +171,9 @@ a5.Package('a5.cl')
 		 * @param {String} value The html to display.
 		 */
 		proto.drawHTML = function(value, data){
+			//coerce value to a space if empty string to deal with errors in node replacement validation
+			if(value === "")
+				value = " ";
 			if(data && typeof data === 'object'){
 				var plgn = this.plugins().getRegisteredProcess('htmlTemplate');
 				if(plgn)
@@ -276,8 +279,8 @@ a5.Package('a5.cl')
 				this._cl_pendingViewElementProps.paddingRight = this._cl_calculatedClientOffset.right + 'px';
 				this._cl_pendingViewElementProps.paddingBottom = this._cl_calculatedClientOffset.bottom + 'px';
 				this._cl_pendingViewElementProps.paddingLeft = this._cl_calculatedClientOffset.left + 'px';
-				this._cl_pendingViewElementProps.width = this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width + 'px';
-				this._cl_pendingViewElementProps.height = this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height + 'px';
+				this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width) + 'px';
+				this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height) + 'px';
 				
 				if(suppressRender !== true)
 					this._cl_render();

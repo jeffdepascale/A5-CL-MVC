@@ -17,14 +17,17 @@ a5.Package('a5.cl.mvc.core')
 		proto.AppViewContainer = function(){
 			proto.superclass(this);
 			this._cl_errorStopped = false;
-			this._cl_systemWindowContainer = this.create(im.WindowContainer);
-			this._cl_systemWindowContainer.hide();
+			this._cl_systemWindowContainer = this.create(im.WindowContainer);		
 			this._cl_appWindowContainer = this.create(im.WindowContainer);
+			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
+			this._cl_addedToTree();
+		}
+		
+		proto.initialize = function(){
+			this._cl_systemWindowContainer.hide();
 			this._cl_appWindowContainer.hide();
 			this._cl_appWindowContainer.showOverflow(true);
-			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
 			this.showOverflow(true);
-			this._cl_addedToTree();
 		}
 		
 		proto.Override.addSubView = proto.Override.removeSubView = proto.Override.subViewToTop = proto.Override.subViewToBottom = 

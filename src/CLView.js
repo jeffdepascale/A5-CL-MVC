@@ -666,6 +666,8 @@ a5.Package("a5.cl")
 		proto.hide = function(){
 			this._cl_viewElement.style.display = 'none';
 			this._cl_visible = false;
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**
@@ -675,7 +677,8 @@ a5.Package("a5.cl")
 		proto.show = function(){
 			this._cl_viewElement.style.display = this._cl_defaultDisplayStyle;
 			this._cl_visible = true;
-			this.redraw();
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**
@@ -989,8 +992,8 @@ a5.Package("a5.cl")
 				w = CLView._cl_setWH(this, 'width', this._cl_width),
 				h = CLView._cl_setWH(this, 'height', this._cl_height),
 				forceRedraw = (w !== undefined || h !== undefined);
-				this._cl_pendingViewElementProps.width = w !== null ? (CLView._cl_updateWH(this, w, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width) + 'px') : undefined;
-				this._cl_pendingViewElementProps.height = h !== null ? (CLView._cl_updateWH(this, h, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height) + 'px') : undefined;		
+				this._cl_pendingViewElementProps.width = w !== null ? (Math.max(0, CLView._cl_updateWH(this, w, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width)) + 'px') : undefined;
+				this._cl_pendingViewElementProps.height = h !== null ? (Math.max(0, CLView._cl_updateWH(this, h, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height)) + 'px') : undefined;		
 				this._cl_pendingViewElementProps.left = CLView._cl_updateXY(this, propXVal, this._cl_alignX, this._cl_parentView.width('inner'), 'width') + 'px';
 				this._cl_pendingViewElementProps.top = CLView._cl_updateXY(this, propYVal, this._cl_alignY, this._cl_parentView.height('inner'), 'height') + 'px';
 				this._cl_pendingViewElementProps.paddingTop = this._cl_calculatedClientOffset.top + 'px';

@@ -496,38 +496,40 @@ a5.Package('a5.cl')
 					shouldYScroll = false, 
 					didXScrollChange = false, 
 					didYScrollChange = false,
-					percentChildren = [];
+					percentChildren = [],
+					prevView = null;
 				for (i = 0, l = this._cl_childViews.length; i < l; i++) {
 					view = this._cl_childViews[i];
-					if(((this._cl_height.auto || this._cl_scrollYEnabled.value) && view._cl_height.percent !== false) || ((this._cl_width.auto || this._cl_scrollXEnabled.value) && view._cl_width.percent !== false))
-						percentChildren.push(view);
-					if (this._cl_relX || this._cl_relY) {
-						if (i > 0) {
-							prevView = this._cl_childViews[i - 1];
-							if (this._cl_relX) 
-								view._cl_x.state = prevView.x(true) + view.x() + prevView.width();
-							if (this._cl_relY) 
-								view._cl_y.state = prevView.y(true) + view.y() + prevView.height();
-						} else {
-							if (this._cl_relX) 
-								view._cl_x.state = view.x();
-							if (this._cl_relY) 
-								view._cl_y.state = view.y();
+					if (view.visible()) {
+						if (((this._cl_height.auto || this._cl_scrollYEnabled.value) && view._cl_height.percent !== false) || ((this._cl_width.auto || this._cl_scrollXEnabled.value) && view._cl_width.percent !== false)) 
+							percentChildren.push(view);
+						if (this._cl_relX || this._cl_relY) {
+							if (prevView) {
+								if (this._cl_relX) 
+									view._cl_x.state = prevView.x(true) + view.x() + prevView.width();
+								if (this._cl_relY) 
+									view._cl_y.state = prevView.y(true) + view.y() + prevView.height();
+							} else {
+								if (this._cl_relX) 
+									view._cl_x.state = view.x();
+								if (this._cl_relY) 
+									view._cl_y.state = view.y();
+							}
 						}
-					}		
-					view._cl_redraw(force || forceChildren, true);
-					
-					if (CLViewContainer.viewAffectsAutoWidth(view)) {
-						maxW = view.width() + view.x(true);
-						if (maxW > outerW) 
-							outerW = maxW;
+						view._cl_redraw(force || forceChildren, true);
+						
+						if (CLViewContainer.viewAffectsAutoWidth(view)) {
+							maxW = view.width() + view.x(true);
+							if (maxW > outerW) 
+								outerW = maxW;
+						}
+						if (CLViewContainer.viewAffectsAutoHeight(view)) {
+							maxH = view.height() + view.y(true);
+							if (maxH > outerH) 
+								outerH = maxH;
+						}
+						prevView = view;
 					}
-					if(CLViewContainer.viewAffectsAutoHeight(view)) {
-						maxH = view.height() + view.y(true);
-						if (maxH > outerH) 
-							outerH = maxH;
-					}
-				}
 				//update the content width/height
 				contentWidthChanged = this._cl_width !== outerW;
 				contentHeightChanged = this._cl_height !== outerH;
