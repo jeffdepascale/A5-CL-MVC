@@ -639,13 +639,13 @@ a5.Package('a5.cl')
 		
 		proto.Override._cl_addedToTree = function(){
 			proto.superclass()._cl_addedToTree.call(this);
-			for (var i = 0, l = this.subViewCount(); i < l; i++)
+			for(var i=0; i<this.subViewCount(); i++)
 				this.subViewAtIndex(i)._cl_addedToTree();
 		}
 		
 		proto.Override._cl_removedFromTree = function(){
 			proto.superclass()._cl_removedFromTree.call(this);
-			for(var i=0, l=this.subViewCount(); i<l; i++)
+			for(var i=0; i<this.subViewCount(); i++)
 				this.subViewAtIndex(i)._cl_removedFromTree();
 		}		
 		
