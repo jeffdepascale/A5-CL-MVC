@@ -1,5 +1,5 @@
 
-a5.Package('a5.cl.mvc')
+a5.Package('a5.cl')
 
 	.Extends('a5.Event')
 	.Static(function(CLMVCEvent){

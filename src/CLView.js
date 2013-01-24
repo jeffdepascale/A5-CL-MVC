@@ -159,7 +159,7 @@ a5.Package("a5.cl")
 		proto.CLView = function(){
 			proto.superclass(this);
 			if(CLView._cl_transformProp === undefined)
-				CLView._cl_transformProp = a5.cl.core.Utils.getCSSProp('transform');
+				CLView._cl_transformProp = a5.cl.initializers.dom.Utils.getCSSProp('transform');
 			this._cl_viewElement = document.createElement(this._cl_viewElementType);
 			this._cl_viewElement.className = proto.className.call(this);
 			this._cl_viewElement.style.backgroundColor = 'transparent';
@@ -407,11 +407,11 @@ a5.Package("a5.cl")
 			if(value) {
 				this._cl_viewElement.style.backgroundColor = value;
 				//if we're using filters, 
-				if(this.cl().clientPlatform() === "IE" || this.cl().clientPlatform() === "WP7")
+				if(this.DOM().clientPlatform() === "IE" || this.DOM().clientPlatform() === "WP7")
 					this._cl_viewElement.style.filter = this._cl_viewElement.style.filter.replace(/progid:DXImageTransform\.Microsoft\.gradient\(.*?\)/gi, "");
 				//if two valid hex colors were passed, use a gradient
 				if(a5.cl.core.Utils.validateHexColor(value) && a5.cl.core.Utils.validateHexColor(value2)){
-					if(this.cl().clientPlatform() === "IE" || this.cl().clientPlatform() === "WP7")
+					if(this.DOM().clientPlatform() === "IE" || this.DOM().clientPlatform() === "WP7")
 						this._cl_viewElement.style.filter += " progid:DXImageTransform.Microsoft.gradient(startColorstr='" + a5.cl.core.Utils.expandHexColor(value) + "', endColorstr='" + a5.cl.core.Utils.expandHexColor(value2) + "')";
 					else {
 						//try mozilla first
@@ -438,7 +438,7 @@ a5.Package("a5.cl")
 			if(typeof value === 'number'){
 				if(typeof duration === 'number')
 					return this.animate(duration, {alpha:value, ease:ease});
-				if (this.cl().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
+				if (this.DOM().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
 					this._cl_viewElement.style.filter = 
 						this._cl_viewElement.style.filter.replace(/alpha\(.*?\)/gi, '') 
 						+ ' alpha(opacity=' + (value * 100) + ')';
@@ -575,7 +575,7 @@ a5.Package("a5.cl")
 				if (typeof radius === 'number') {
 					if(typeof duration === 'number')
 						return this.animate(duration, {borderRadius:radius, ease:ease});
-					this._cl_viewElement.style[a5.cl.core.Utils.getCSSProp('borderRadius')] = radius + 'px';
+					this._cl_viewElement.style[a5.cl.initializers.dom.Utils.getCSSProp('borderRadius')] = radius + 'px';
 				} else {
 					for (var prop in radius)
 						this._cl_viewElement.style['border' + (a5.cl.core.Utils.initialCap(prop)) + 'Radius'] = (radius[prop] || 0) + 'px';
@@ -968,7 +968,7 @@ a5.Package("a5.cl")
 		proto._cl_css = function(prop, value, getBrowserImplementation){
 			getBrowserImplementation = getBrowserImplementation || false;
 			if(getBrowserImplementation)
-				prop = a5.cl.core.Utils.getCSSProp(prop);
+				prop = a5.cl.initializers.dom.Utils.getCSSProp(prop);
 			if(prop)
 				this._cl_viewElement.style[prop] = value;
 			return this;

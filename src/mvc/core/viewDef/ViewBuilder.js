@@ -172,7 +172,7 @@ a5.Package('a5.cl.core.viewDef')
 				}
 			} else {
 				//Added method check due to CLView being a possible node owner
-				if (this._cl_view._cl_vdViewReady && this._cl_childIndex === 0 && !this._cl_isCustomNode) 
+				if (this._cl_view._cl_vdViewReady) 
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);
@@ -251,9 +251,9 @@ a5.Package('a5.cl.core.viewDef')
 				//start at the top with the global defaults
 				this._cl_applyDefaults(defaults);
 				//get the environment variables
-				var clientEnvironment = this.cl()._core().envManager().clientEnvironment(true).toUpperCase(),
-					clientPlatform = this.cl()._core().envManager().clientPlatform().toUpperCase(),
-					clientOrientation = this.cl()._core().envManager().clientOrientation().toUpperCase();
+				var clientEnvironment = this.DOM().clientEnvironment(true).toUpperCase(),
+					clientPlatform = this.DOM().clientPlatform().toUpperCase(),
+					clientOrientation = this.DOM().clientOrientation().toUpperCase();
 				//apply top-level environment attributes
 				var envNodes = this._cl_applyEnvironmentDefaults(defaults, 'Environment', clientEnvironment);
 				//apply loose orientation attributes

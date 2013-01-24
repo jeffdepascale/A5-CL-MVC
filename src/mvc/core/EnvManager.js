@@ -15,12 +15,8 @@ a5.Package('a5.cl.mvc.core')
 			getScrollBarWidth();
 			cls.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, updateResize);
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
-			_forcedClientEnvironment = _clientEnvironment = cls.cl().clientEnvironment();
+			_forcedClientEnvironment = _clientEnvironment = cls.DOM().clientEnvironment();
 			updateResize();
-		}	
-		
-		cls.cl().clientEnvironment = function(forced){
-			return forced ? _forcedClientEnvironment:a5.cl.core.EnvManager.instance().clientEnvironment();
 		}
 		
 		this.scrollBarWidth = function(){ return _scrollBarWidth; }
@@ -48,7 +44,7 @@ a5.Package('a5.cl.mvc.core')
 		    }
 			if(_windowProps.scrollHeight === 0) _windowProps.scrollHeight = _windowProps.height;
 			if(_windowProps.scrollWidth === 0) _windowProps.scrollWidth = _windowProps.width;
-			if(cls.config().clientEnvironmentOverrides){
+			if(cls.DOM().pluginConfig().clientEnvironmentOverrides){
 				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.config().mobileWidthThreshold){
 					_forcedClientEnvironment = _clientEnvironment;
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])

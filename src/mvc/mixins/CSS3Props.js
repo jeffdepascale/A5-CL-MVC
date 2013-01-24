@@ -11,7 +11,7 @@ a5.Package('a5.cl.mvc.mixins')
 		
 		mixin._cl_processCSS3Prop = function(prop, check, value){
 			if(value === true)
-				return a5.cl.core.Utils.getCSSProp(prop) !== null;
+				return a5.cl.initializers.dom.Utils.getCSSProp(prop) !== null;
 			return this._cl_css(prop, value, true);
 		}
 		

@@ -103,12 +103,12 @@ a5.Package('a5.cl')
 					if (this._cl_defaultViewDef) {
 						if (this._cl_defaultViewDef === CLController.ASSUME_XML_VIEW) {
 							isAssumed = true;
-							url = this.config().applicationViewPath + this.mvcName() + '.xml';
+							url = this.MVC().pluginConfig().applicationViewPath + this.mvcName() + '.xml';
 						} else {
-							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
+							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
 					}					
-					this.cl().include(url, function(xml){
+					this.cl().initializer().load(url, function(xml){
 						self._cl_buildViewDef(xml, callback, scope);
 					}, null, function(e){
 						//if an error occurred while loading the viewdef, throw a 404
@@ -175,7 +175,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_renderComplete = function(callback){
 			if(this._cl_mappable)
-				this.MVC().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
+				this.MVC().application().dispatchEvent(im.CLMVCEvent.RENDER_CONTROLLER, {controller:this}, false);
 			if(callback)
 				callback.call(this);
 		}

@@ -21,7 +21,7 @@ a5.Package("a5.cl")
 		
 		proto.CLApplication = function(){
 			proto.superclass(this);
-			this.addEventListener(im.CLEvent.RENDER_CONTROLLER, this._cl_eRenderControllerHandler, false, this);
+			this.addEventListener(a5.cl.CLMVCEvent.RENDER_CONTROLLER, this._cl_eRenderControllerHandler, false, this);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			this.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);

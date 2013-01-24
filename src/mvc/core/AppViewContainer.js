@@ -20,10 +20,12 @@ a5.Package('a5.cl.mvc.core')
 			this._cl_systemWindowContainer = this.create(im.WindowContainer);		
 			this._cl_appWindowContainer = this.create(im.WindowContainer);
 			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
+			this.showOverflow(true);
 			this._cl_addedToTree();
 		}
 		
 		proto.initialize = function(){
+			proto.superclass().viewReady.apply(this, arguments);
 			this._cl_systemWindowContainer.hide();
 			this._cl_appWindowContainer.hide();
 			this._cl_appWindowContainer.showOverflow(true);
@@ -62,17 +64,62 @@ a5.Package('a5.cl.mvc.core')
 					} else {
 						var container = this._cl_appWindowContainer,
 							index = 0,
-							isReplace = false;
+							isReplace = false,
+							modalIndex = null,
+							contextIndex = null,
+							alertIndex = null;
 						if(container.containsSubView(window))
 							container.removeSubView(window, false);
 						for (var i = 0, l = container.subViewCount(); i < l; i++) {
 							var checkedWin = container.subViewAtIndex(i);
-							if (checkedWin._cl_windowLevel === lev.APPLICATION) {
-								index = i + 1;
-							} else if (checkedWin._cl_windowLevel === newWinLevel) {
+							if (checkedWin._cl_windowLevel === newWinLevel && checkedWin._cl_windowLevel !== lev.APPLICATION) {
 								index = i;
 								isReplace = true;
+								break;
+							} else if(checkedWin._cl_windowLevel !== lev.SYSTEM) {
+								switch(checkedWin._cl_windowLevel){
+									case lev.APPLICATION:
+										index = i+1;
+										break;
+									case lev.MODAL:
+										modalIndex = i;
+										break;
+									case lev.CONTEXT:
+										contextIndex = i;
+										break;
+									case lev.ALERT:
+										alertIndex = i;
+										break;
+								}
 							}
+						}
+						switch(newWinLevel){
+							case lev.MODAL:
+								if(modalIndex){
+									index = modalIndex;
+									replace = true;
+								}
+								break;
+							case lev.CONTEXT:
+								if(contextIndex){
+									index = contextIndex;
+									replace = true;
+								} else {
+									if(modalIndex)
+										index = modalIndex +1;
+								}
+								break;
+							case lev.ALERT:
+								if(alertIndex){
+									index = alertIndex;
+									replace = true;
+								} else {
+									if(contextIndex)
+										index = contextIndex +1;
+									else if(modalIndex)
+										index = modalIndex +1;
+								}
+								break;
 						}
 						if((newWinLevel === lev.APPLICATION || container.subViewCount() === 0) || !isReplace)
 							this._cl_appWindowContainer.addSubViewAtIndex(window, index);

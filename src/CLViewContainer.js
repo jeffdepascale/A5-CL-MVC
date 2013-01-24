@@ -530,6 +530,7 @@ a5.Package('a5.cl')
 						}
 						prevView = view;
 					}
+				}
 				//update the content width/height
 				contentWidthChanged = this._cl_width !== outerW;
 				contentHeightChanged = this._cl_height !== outerH;
@@ -591,11 +592,11 @@ a5.Package('a5.cl')
 						this._cl_childViews[i]._cl_render();
 				}
 				
-				if ('ontouchstart' in window) {
-					var prop = a5.cl.core.Utils.getCSSProp('overflowScrolling');
+				/*if ('ontouchstart' in window) {
+					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
 					if (prop) 
 						this._cl_pendingViewElementProps[prop] = 'touch';
-				}
+				}*/
 				
 				if (suppressRender !== true) 
 					this._cl_render();

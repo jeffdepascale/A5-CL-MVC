@@ -29,6 +29,40 @@ a5.Package('a5.cl')
 })
 
 
+
+a5.Package('a5.cl')
+
+	.Extends('a5.Event')
+	.Static(function(CLMVCEvent){
+				
+		/**
+		 * @event
+		 * @description Dispatched when the render() method is called on a mappable controller.
+		 * @param {a5.cl.CLController} controller
+		 */
+		CLMVCEvent.RENDER_CONTROLLER = 'renderController';
+		
+		/**
+		 * @event
+		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
+		 */
+		CLMVCEvent.ADDED_TO_PARENT = 'addedToParent';
+		
+		/**
+		 * @event
+		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
+		 */
+		CLMVCEvent.REMOVED_FROM_PARENT = 'removedFromParent';
+		
+	})
+	.Class('CLMVCEvent', function(cls, im){
+		
+		cls.CLMVCEvent = function(){
+			cls.superclass(this);
+		}		
+})
+
+
 a5.Package('a5.cl.mvc')
 
 	.Extends('a5.Attribute')
@@ -145,7 +179,7 @@ a5.Package('a5.cl.mvc.core')
 		this.RedrawEngine = function(){
 			self.superclass(this);
 			appContainer = self.cl().MVC().application().view();
-			animFrameHook = a5.cl.core.Utils.getVendorWindowMethod('requestAnimationFrame');
+			animFrameHook = a5.cl.initializers.dom.Utils.getVendorWindowMethod('requestAnimationFrame');
 			self.cl().addEventListener(im.CLEvent.PLUGINS_LOADED, ePluginsLoaded);
 		}
 		
@@ -185,9 +219,20 @@ a5.Package('a5.cl.mvc.core')
 						i--;
 					}
 				}
+				target.addOneTimeEventListener(a5.Event.DESTROYED, eRedrawerDestroyedHandler);
 				pendingRedrawers.push(target);
 			}
 			attachForAnimCycle();
+		}
+		
+		var eRedrawerDestroyedHandler = function(e){
+			var view = e.target();
+			for(i = 0; i< pendingRedrawers.length; i++){	
+				if (pendingRedrawers[i] == view) {
+					pendingRedrawers.splice(i, 1);
+					return;
+				}
+			}
 		}
 		
 		var attachForAnimCycle = function(){
@@ -377,14 +422,19 @@ a5.Package('a5.cl.mvc.core')
 		proto.AppViewContainer = function(){
 			proto.superclass(this);
 			this._cl_errorStopped = false;
-			this._cl_systemWindowContainer = this.create(im.WindowContainer);
-			this._cl_systemWindowContainer.hide();
+			this._cl_systemWindowContainer = this.create(im.WindowContainer);		
 			this._cl_appWindowContainer = this.create(im.WindowContainer);
-			this._cl_appWindowContainer.hide();
-			this._cl_appWindowContainer.showOverflow(true);
 			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
 			this.showOverflow(true);
 			this._cl_addedToTree();
+		}
+		
+		proto.initialize = function(){
+			proto.superclass().viewReady.apply(this, arguments);
+			this._cl_systemWindowContainer.hide();
+			this._cl_appWindowContainer.hide();
+			this._cl_appWindowContainer.showOverflow(true);
+			this.showOverflow(true);
 		}
 		
 		proto.Override.addSubView = proto.Override.removeSubView = proto.Override.subViewToTop = proto.Override.subViewToBottom = 
@@ -419,17 +469,62 @@ a5.Package('a5.cl.mvc.core')
 					} else {
 						var container = this._cl_appWindowContainer,
 							index = 0,
-							isReplace = false;
+							isReplace = false,
+							modalIndex = null,
+							contextIndex = null,
+							alertIndex = null;
 						if(container.containsSubView(window))
 							container.removeSubView(window, false);
 						for (var i = 0, l = container.subViewCount(); i < l; i++) {
 							var checkedWin = container.subViewAtIndex(i);
-							if (checkedWin._cl_windowLevel === lev.APPLICATION) {
-								index = i + 1;
-							} else if (checkedWin._cl_windowLevel === newWinLevel) {
+							if (checkedWin._cl_windowLevel === newWinLevel && checkedWin._cl_windowLevel !== lev.APPLICATION) {
 								index = i;
 								isReplace = true;
+								break;
+							} else if(checkedWin._cl_windowLevel !== lev.SYSTEM) {
+								switch(checkedWin._cl_windowLevel){
+									case lev.APPLICATION:
+										index = i+1;
+										break;
+									case lev.MODAL:
+										modalIndex = i;
+										break;
+									case lev.CONTEXT:
+										contextIndex = i;
+										break;
+									case lev.ALERT:
+										alertIndex = i;
+										break;
+								}
 							}
+						}
+						switch(newWinLevel){
+							case lev.MODAL:
+								if(modalIndex){
+									index = modalIndex;
+									replace = true;
+								}
+								break;
+							case lev.CONTEXT:
+								if(contextIndex){
+									index = contextIndex;
+									replace = true;
+								} else {
+									if(modalIndex)
+										index = modalIndex +1;
+								}
+								break;
+							case lev.ALERT:
+								if(alertIndex){
+									index = alertIndex;
+									replace = true;
+								} else {
+									if(contextIndex)
+										index = contextIndex +1;
+									else if(modalIndex)
+										index = modalIndex +1;
+								}
+								break;
 						}
 						if((newWinLevel === lev.APPLICATION || container.subViewCount() === 0) || !isReplace)
 							this._cl_appWindowContainer.addSubViewAtIndex(window, index);
@@ -720,7 +815,7 @@ a5.Package("a5.cl")
 		proto.CLView = function(){
 			proto.superclass(this);
 			if(CLView._cl_transformProp === undefined)
-				CLView._cl_transformProp = a5.cl.core.Utils.getCSSProp('transform');
+				CLView._cl_transformProp = a5.cl.initializers.dom.Utils.getCSSProp('transform');
 			this._cl_viewElement = document.createElement(this._cl_viewElementType);
 			this._cl_viewElement.className = proto.className.call(this);
 			this._cl_viewElement.style.backgroundColor = 'transparent';
@@ -968,11 +1063,11 @@ a5.Package("a5.cl")
 			if(value) {
 				this._cl_viewElement.style.backgroundColor = value;
 				//if we're using filters, 
-				if(this.cl().clientPlatform() === "IE" || this.cl().clientPlatform() === "WP7")
+				if(this.DOM().clientPlatform() === "IE" || this.DOM().clientPlatform() === "WP7")
 					this._cl_viewElement.style.filter = this._cl_viewElement.style.filter.replace(/progid:DXImageTransform\.Microsoft\.gradient\(.*?\)/gi, "");
 				//if two valid hex colors were passed, use a gradient
 				if(a5.cl.core.Utils.validateHexColor(value) && a5.cl.core.Utils.validateHexColor(value2)){
-					if(this.cl().clientPlatform() === "IE" || this.cl().clientPlatform() === "WP7")
+					if(this.DOM().clientPlatform() === "IE" || this.DOM().clientPlatform() === "WP7")
 						this._cl_viewElement.style.filter += " progid:DXImageTransform.Microsoft.gradient(startColorstr='" + a5.cl.core.Utils.expandHexColor(value) + "', endColorstr='" + a5.cl.core.Utils.expandHexColor(value2) + "')";
 					else {
 						//try mozilla first
@@ -999,7 +1094,7 @@ a5.Package("a5.cl")
 			if(typeof value === 'number'){
 				if(typeof duration === 'number')
 					return this.animate(duration, {alpha:value, ease:ease});
-				if (this.cl().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
+				if (this.DOM().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
 					this._cl_viewElement.style.filter = 
 						this._cl_viewElement.style.filter.replace(/alpha\(.*?\)/gi, '') 
 						+ ' alpha(opacity=' + (value * 100) + ')';
@@ -1136,7 +1231,7 @@ a5.Package("a5.cl")
 				if (typeof radius === 'number') {
 					if(typeof duration === 'number')
 						return this.animate(duration, {borderRadius:radius, ease:ease});
-					this._cl_viewElement.style[a5.cl.core.Utils.getCSSProp('borderRadius')] = radius + 'px';
+					this._cl_viewElement.style[a5.cl.initializers.dom.Utils.getCSSProp('borderRadius')] = radius + 'px';
 				} else {
 					for (var prop in radius)
 						this._cl_viewElement.style['border' + (a5.cl.core.Utils.initialCap(prop)) + 'Radius'] = (radius[prop] || 0) + 'px';
@@ -1227,6 +1322,8 @@ a5.Package("a5.cl")
 		proto.hide = function(){
 			this._cl_viewElement.style.display = 'none';
 			this._cl_visible = false;
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**
@@ -1236,7 +1333,8 @@ a5.Package("a5.cl")
 		proto.show = function(){
 			this._cl_viewElement.style.display = this._cl_defaultDisplayStyle;
 			this._cl_visible = true;
-			this.redraw();
+			if(this.parentView())
+				this.parentView()._cl_redraw();
 		}
 		
 		/**
@@ -1526,7 +1624,7 @@ a5.Package("a5.cl")
 		proto._cl_css = function(prop, value, getBrowserImplementation){
 			getBrowserImplementation = getBrowserImplementation || false;
 			if(getBrowserImplementation)
-				prop = a5.cl.core.Utils.getCSSProp(prop);
+				prop = a5.cl.initializers.dom.Utils.getCSSProp(prop);
 			if(prop)
 				this._cl_viewElement.style[prop] = value;
 			return this;
@@ -1550,8 +1648,8 @@ a5.Package("a5.cl")
 				w = CLView._cl_setWH(this, 'width', this._cl_width),
 				h = CLView._cl_setWH(this, 'height', this._cl_height),
 				forceRedraw = (w !== undefined || h !== undefined);
-				this._cl_pendingViewElementProps.width = w !== null ? (CLView._cl_updateWH(this, w, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width) + 'px') : undefined;
-				this._cl_pendingViewElementProps.height = h !== null ? (CLView._cl_updateWH(this, h, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height) + 'px') : undefined;		
+				this._cl_pendingViewElementProps.width = w !== null ? (Math.max(0, CLView._cl_updateWH(this, w, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width)) + 'px') : undefined;
+				this._cl_pendingViewElementProps.height = h !== null ? (Math.max(0, CLView._cl_updateWH(this, h, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height)) + 'px') : undefined;		
 				this._cl_pendingViewElementProps.left = CLView._cl_updateXY(this, propXVal, this._cl_alignX, this._cl_parentView.width('inner'), 'width') + 'px';
 				this._cl_pendingViewElementProps.top = CLView._cl_updateXY(this, propYVal, this._cl_alignY, this._cl_parentView.height('inner'), 'height') + 'px';
 				this._cl_pendingViewElementProps.paddingTop = this._cl_calculatedClientOffset.top + 'px';
@@ -1689,12 +1787,8 @@ a5.Package('a5.cl.mvc.core')
 			getScrollBarWidth();
 			cls.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, updateResize);
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
-			_forcedClientEnvironment = _clientEnvironment = cls.cl().clientEnvironment();
+			_forcedClientEnvironment = _clientEnvironment = cls.DOM().clientEnvironment();
 			updateResize();
-		}	
-		
-		cls.cl().clientEnvironment = function(forced){
-			return forced ? _forcedClientEnvironment:a5.cl.core.EnvManager.instance().clientEnvironment();
 		}
 		
 		this.scrollBarWidth = function(){ return _scrollBarWidth; }
@@ -1722,7 +1816,7 @@ a5.Package('a5.cl.mvc.core')
 		    }
 			if(_windowProps.scrollHeight === 0) _windowProps.scrollHeight = _windowProps.height;
 			if(_windowProps.scrollWidth === 0) _windowProps.scrollWidth = _windowProps.width;
-			if(cls.config().clientEnvironmentOverrides){
+			if(cls.DOM().pluginConfig().clientEnvironmentOverrides){
 				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.config().mobileWidthThreshold){
 					_forcedClientEnvironment = _clientEnvironment;
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])
@@ -1887,8 +1981,8 @@ a5.Package('a5.cl.core.viewDef')
 		}
 		
 		ViewDefParser.processAttribute = function(value){
-			//first split the value (pipe delimited)
-			var attributes = value.split('|'),
+			//first split the value (pipe delimited) - unless it starts with {Single}
+			var attributes = value.substr(0, 8) == "{Single}" ? [value.substr(8)] : value.split('|'),
 				json = window.JSON || a5.cl.core.JSON,
 			//regex for detecting strict typing
 				typeFlags = /{RegExp}|{Boolean}|{Number}|{Array}|{String}|{Object}|{Namespace}/,
@@ -1925,14 +2019,15 @@ a5.Package('a5.cl.core.viewDef')
 						processed.push(new RegExp(split[1], split[2]));
 						break;
 					default: //try to guess by default
-						if(!isNaN(attr)) //check if it's a number
+						if(!isNaN(attr)){ //check if it's a number
 							processed.push(parseFloat(attr));
-						else if(attr === 'true' || attr === 'false') //check if it's a boolean
+						} else if(attr === 'true' || attr === 'false') {//check if it's a boolean
 							processed.push(attr === 'true');
-						else if(/(^\[.*\]$)|(\{.*\})$/.test(attr)) //check if it looks like an object or an array
-							processed.push(json.parse(attr));
-						else //otherwise, force to string
+						} else if(/(^\[.*\]$)|(\{.*\})$/.test(attr)){ //check if it looks like an object or an array
+							try{ processed.push(json.parse(attr)) } catch(e) { processed.push(attr + ''); };
+						} else { //otherwise, force to string
 							processed.push(attr + '');
+						}
 				}
 			}
 			return processed;
@@ -2009,9 +2104,9 @@ a5.Package('a5.cl.core.viewDef')
 		}
 		
 		proto._cl_getDefinitionNode = function(){
-			var clientEnvironment = this.cl()._core().envManager().clientEnvironment(true).toUpperCase(),
-				clientPlatform = this.cl()._core().envManager().clientPlatform().toUpperCase(),
-				clientOrientation = this.cl()._core().envManager().clientOrientation().toUpperCase(),
+			var clientEnvironment = this.DOM().clientEnvironment(true).toUpperCase(),
+				clientPlatform = this.DOM().clientPlatform().toUpperCase(),
+				clientOrientation = this.DOM().clientOrientation().toUpperCase(),
 				defNode = ViewDefParser.getElementsByTagName(this._cl_xml.documentElement, 'Definition'),
 				definition = (defNode && defNode.length > 0) ? defNode[0] : null,
 				env = ViewDefParser._cl_getEnvironmentNode(definition, 'Environment', clientEnvironment);
@@ -2217,7 +2312,7 @@ a5.Package('a5.cl.core.viewDef')
 				}
 			} else {
 				//Added method check due to CLView being a possible node owner
-				if (this._cl_view._cl_vdViewReady && this._cl_childIndex === 0 && !this._cl_isCustomNode) 
+				if (this._cl_view._cl_vdViewReady) 
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);
@@ -2296,9 +2391,9 @@ a5.Package('a5.cl.core.viewDef')
 				//start at the top with the global defaults
 				this._cl_applyDefaults(defaults);
 				//get the environment variables
-				var clientEnvironment = this.cl()._core().envManager().clientEnvironment(true).toUpperCase(),
-					clientPlatform = this.cl()._core().envManager().clientPlatform().toUpperCase(),
-					clientOrientation = this.cl()._core().envManager().clientOrientation().toUpperCase();
+				var clientEnvironment = this.DOM().clientEnvironment(true).toUpperCase(),
+					clientPlatform = this.DOM().clientPlatform().toUpperCase(),
+					clientOrientation = this.DOM().clientOrientation().toUpperCase();
 				//apply top-level environment attributes
 				var envNodes = this._cl_applyEnvironmentDefaults(defaults, 'Environment', clientEnvironment);
 				//apply loose orientation attributes
@@ -2583,7 +2678,8 @@ a5.Package('a5.cl.mvc.core')
 			} else {
 				if (typeof mappingObj.desc === 'string') {
 					mappingObj.desc = mappingObj.desc.split('/');
-					mappingObj.desc.shift();
+					if(mappingObj.desc[0] === "")
+						mappingObj.desc.shift();
 				} else {
 					self.throwError('invalid mapping: "desc" param must be a string');
 				}
@@ -2771,7 +2867,7 @@ a5.Package('a5.cl.mvc.mixins')
 		
 		mixin._cl_processCSS3Prop = function(prop, check, value){
 			if(value === true)
-				return a5.cl.core.Utils.getCSSProp(prop) !== null;
+				return a5.cl.initializers.dom.Utils.getCSSProp(prop) !== null;
 			return this._cl_css(prop, value, true);
 		}
 		
@@ -2862,6 +2958,10 @@ a5.Package('a5.cl')
 			return this._cl_viewElement;
 		}
 		
+		proto.elemID = function(id){
+			this._cl_viewElement.id = id;
+		}
+		
 		/**
 		 * If true, clicks are processed, which enabled the functionality for handleAnchors and handleHrefClick().  Defaults to true.
 		 * 
@@ -2889,7 +2989,7 @@ a5.Package('a5.cl')
 				anchorIndex = href ? href.indexOf('#') : null;
 				anchorValid = false;
 				if(typeof href !== 'undefined'){
-					if (anchorIndex === 0 || href.substr(0, anchorIndex - 1) === this.cl().appPath(true)) 
+					if (anchorIndex === 0 || href.substr(0, anchorIndex - 1) === this.DOM().appPath(true)) 
 						anchorValid = true;
 					if (this._cl_handleAnchors && anchorValid) {
 						this.scrollToAnchor(href.substr(anchorIndex + 1));
@@ -2968,6 +3068,9 @@ a5.Package('a5.cl')
 		 * @param {String} value The html to display.
 		 */
 		proto.drawHTML = function(value, data){
+			//coerce value to a space if empty string to deal with errors in node replacement validation
+			if(value === "")
+				value = " ";
 			if(data && typeof data === 'object'){
 				var plgn = this.plugins().getRegisteredProcess('htmlTemplate');
 				if(plgn)
@@ -2981,7 +3084,7 @@ a5.Package('a5.cl')
 			if (typeof url == 'string') {
 				this._cl_loadURL = url;
 				var self = this;
-				this.cl().include(url, function(value){
+				this.cl().initializer().load(url, function(value){
 					self.drawHTML(value);
 				})
 				return this;
@@ -3019,7 +3122,7 @@ a5.Package('a5.cl')
 		proto.css = function(prop, value, getBrowserImplementation){
 			getBrowserImplementation = getBrowserImplementation || false;
 			if(getBrowserImplementation)
-				prop = a5.cl.core.Utils.getCSSProp(prop);
+				prop = a5.cl.initializers.dom.Utils.getCSSProp(prop);
 			if(prop)
 			this._cl_viewElement.style[prop] = value;
 			return this;
@@ -3073,13 +3176,13 @@ a5.Package('a5.cl')
 				this._cl_pendingViewElementProps.paddingRight = this._cl_calculatedClientOffset.right + 'px';
 				this._cl_pendingViewElementProps.paddingBottom = this._cl_calculatedClientOffset.bottom + 'px';
 				this._cl_pendingViewElementProps.paddingLeft = this._cl_calculatedClientOffset.left + 'px';
-				this._cl_pendingViewElementProps.width = this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width + 'px';
-				this._cl_pendingViewElementProps.height = this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height + 'px';
+				this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width) + 'px';
+				this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height) + 'px';
 				
 				if(suppressRender !== true)
 					this._cl_render();
 				
-				if(!this._cl_isInDocument && a5.cl.core.Utils.elementInDocument(this._cl_viewElement)) {
+				if(!this._cl_isInDocument && a5.cl.initializers.dom.Utils.elementInDocument(this._cl_viewElement)) {
 					this._cl_isInDocument = true;
 					if (this._cl_viewElement.innerHTML !== "" && (this._cl_width.auto || this._cl_height.auto)){
 						var nodes = [];
@@ -3129,6 +3232,7 @@ a5.Package('a5.cl')
 				this.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false, this);
 			} else {
 				this.dispatchEvent('CONTENT_UPDATED');
+				this.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
 				this.htmlUpdated(false);
 			}
 			if (typeof value == 'string') {
@@ -3650,36 +3754,39 @@ a5.Package('a5.cl')
 					shouldYScroll = false, 
 					didXScrollChange = false, 
 					didYScrollChange = false,
-					percentChildren = [];
+					percentChildren = [],
+					prevView = null;
 				for (i = 0, l = this._cl_childViews.length; i < l; i++) {
 					view = this._cl_childViews[i];
-					if(((this._cl_height.auto || this._cl_scrollYEnabled.value) && view._cl_height.percent !== false) || ((this._cl_width.auto || this._cl_scrollXEnabled.value) && view._cl_width.percent !== false))
-						percentChildren.push(view);
-					if (this._cl_relX || this._cl_relY) {
-						if (i > 0) {
-							prevView = this._cl_childViews[i - 1];
-							if (this._cl_relX) 
-								view._cl_x.state = prevView.x(true) + view.x() + prevView.width();
-							if (this._cl_relY) 
-								view._cl_y.state = prevView.y(true) + view.y() + prevView.height();
-						} else {
-							if (this._cl_relX) 
-								view._cl_x.state = view.x();
-							if (this._cl_relY) 
-								view._cl_y.state = view.y();
+					if (view.visible()) {
+						if (((this._cl_height.auto || this._cl_scrollYEnabled.value) && view._cl_height.percent !== false) || ((this._cl_width.auto || this._cl_scrollXEnabled.value) && view._cl_width.percent !== false)) 
+							percentChildren.push(view);
+						if (this._cl_relX || this._cl_relY) {
+							if (prevView) {
+								if (this._cl_relX) 
+									view._cl_x.state = prevView.x(true) + view.x() + prevView.width();
+								if (this._cl_relY) 
+									view._cl_y.state = prevView.y(true) + view.y() + prevView.height();
+							} else {
+								if (this._cl_relX) 
+									view._cl_x.state = view.x();
+								if (this._cl_relY) 
+									view._cl_y.state = view.y();
+							}
 						}
-					}		
-					view._cl_redraw(force || forceChildren, true);
-					
-					if (CLViewContainer.viewAffectsAutoWidth(view)) {
-						maxW = view.width() + view.x(true);
-						if (maxW > outerW) 
-							outerW = maxW;
-					}
-					if(CLViewContainer.viewAffectsAutoHeight(view)) {
-						maxH = view.height() + view.y(true);
-						if (maxH > outerH) 
-							outerH = maxH;
+						view._cl_redraw(force || forceChildren, true);
+						
+						if (CLViewContainer.viewAffectsAutoWidth(view)) {
+							maxW = view.width() + view.x(true);
+							if (maxW > outerW) 
+								outerW = maxW;
+						}
+						if (CLViewContainer.viewAffectsAutoHeight(view)) {
+							maxH = view.height() + view.y(true);
+							if (maxH > outerH) 
+								outerH = maxH;
+						}
+						prevView = view;
 					}
 				}
 				//update the content width/height
@@ -3743,11 +3850,11 @@ a5.Package('a5.cl')
 						this._cl_childViews[i]._cl_render();
 				}
 				
-				if ('ontouchstart' in window) {
-					var prop = a5.cl.core.Utils.getCSSProp('overflowScrolling');
+				/*if ('ontouchstart' in window) {
+					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
 					if (prop) 
 						this._cl_pendingViewElementProps[prop] = 'touch';
-				}
+				}*/
 				
 				if (suppressRender !== true) 
 					this._cl_render();
@@ -3791,13 +3898,13 @@ a5.Package('a5.cl')
 		
 		proto.Override._cl_addedToTree = function(){
 			proto.superclass()._cl_addedToTree.call(this);
-			for (var i = 0, l = this.subViewCount(); i < l; i++)
+			for(var i=0; i<this.subViewCount(); i++)
 				this.subViewAtIndex(i)._cl_addedToTree();
 		}
 		
 		proto.Override._cl_removedFromTree = function(){
 			proto.superclass()._cl_removedFromTree.call(this);
-			for(var i=0, l=this.subViewCount(); i<l; i++)
+			for(var i=0; i<this.subViewCount(); i++)
 				this.subViewAtIndex(i)._cl_removedFromTree();
 		}		
 		
@@ -4015,6 +4122,7 @@ a5.Package('a5.cl')
 		this.Properties(function(){
 			this._cl_view = null;
 			this._cl_mappable = false;
+			this._cl_defaultViewDef = null;
 			this._cl_viewDefDefaults = [];
 			this._cl_viewDefParser = null;
 			this._cl_viewDefCallback = null;
@@ -4101,12 +4209,12 @@ a5.Package('a5.cl')
 					if (this._cl_defaultViewDef) {
 						if (this._cl_defaultViewDef === CLController.ASSUME_XML_VIEW) {
 							isAssumed = true;
-							url = this.config().applicationViewPath + this.mvcName() + '.xml';
+							url = this.MVC().pluginConfig().applicationViewPath + this.mvcName() + '.xml';
 						} else {
-							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.config().applicationViewPath : '') + this._cl_defaultViewDef;
+							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
 					}					
-					this.cl().include(url, function(xml){
+					this.cl().initializer().load(url, function(xml){
 						self._cl_buildViewDef(xml, callback, scope);
 					}, null, function(e){
 						//if an error occurred while loading the viewdef, throw a 404
@@ -4173,7 +4281,7 @@ a5.Package('a5.cl')
 		
 		proto._cl_renderComplete = function(callback){
 			if(this._cl_mappable)
-				this.MVC().application().dispatchEvent(this.create(im.CLEvent, [im.CLEvent.RENDER_CONTROLLER, false]), {controller:this});
+				this.MVC().application().dispatchEvent(im.CLMVCEvent.RENDER_CONTROLLER, {controller:this}, false);
 			if(callback)
 				callback.call(this);
 		}
@@ -4296,7 +4404,12 @@ a5.Package('a5.cl')
 		
 		proto._cl_viewCreated = function(view){
 			this._cl_view = view;
+			view.addOneTimeEventListener(a5.Event.DESTROYED, this._cl_viewDestroyedHandler, false, this);
 			view._cl_controller = this;
+		}
+		
+		proto._cl_viewDestroyedHandler = function(e){
+			this._cl_view = null;
 		}
 		
 		proto._cl_viewDefComplete = function(view){
@@ -4341,7 +4454,7 @@ a5.Package("a5.cl")
 		
 		proto.CLApplication = function(){
 			proto.superclass(this);
-			this.addEventListener(im.CLEvent.RENDER_CONTROLLER, this._cl_eRenderControllerHandler, false, this);
+			this.addEventListener(a5.cl.CLMVCEvent.RENDER_CONTROLLER, this._cl_eRenderControllerHandler, false, this);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			this.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
@@ -4518,17 +4631,17 @@ a5.Package('a5.cl.plugins.hashManager')
 			cls.configDefaults({
 				delimiter:'#!'
 			});
-			browserSupportCheck();
 		}	
 		
 		cls.Override.initializePlugin = function(){
+			browserSupportCheck();
 			hashDelimiter = cls.pluginConfig().delimiter;
 			if(getHash(true) == "") setLocHash(hashDelimiter);
 		}
 		
 		cls.initialize = function(){
 			update();
-			var oldIE = cls.cl().clientPlatform() === 'IE' && cls.cl().browserVersion() < 9;
+			var oldIE = cls.DOM().clientPlatform() === 'IE' && cls.DOM().browserVersion() < 9;
 			if ('onhashchange' in window && !oldIE) {
 				window.onhashchange = update;
 			} else cls.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
@@ -4549,6 +4662,7 @@ a5.Package('a5.cl.plugins.hashManager')
 			if(hash instanceof Array) hash = hash.join('/');
 			if(hash == null || hash == '/') hash = "";
 			if (forceRedirect === true || (hash !== lastHash && hash !== getHash())) {
+				cls.dispatchEvent(im.CLHashEvent.HASH_WILL_CHANGE, {hashArray:hash});
 				if (hash == "") {
 					if (skipUpdate === true) lastHash = hashDelimiter;
 					setLocHash(hashDelimiter);
@@ -4581,6 +4695,7 @@ a5.Package('a5.cl.plugins.hashManager')
 		
 		var processHash = function(hash){
 			hash = hash.substring(hashDelimiter.length);
+			hash = ((hash.indexOf('?') !== -1) ? hash.substr(0, hash.indexOf('?')) : hash);
 			var parsedLinks = hash.split('/');
 			if(parsedLinks[0] === "")
 				parsedLinks.shift();
@@ -4615,7 +4730,7 @@ a5.Package('a5.cl.plugins.hashManager')
 		
 		
 		browserSupportCheck = function(){
-	        if (cls.cl().clientPlatform() == 'IE'&& cls.cl().browserVersion() < 8) createIframe();
+	        if (cls.DOM().clientPlatform() == 'IE'&& cls.DOM().browserVersion() < 8) createIframe();
 			else if (history.navigationMode) history.navigationMode = 'compatible';
 		},	
 		
@@ -4649,6 +4764,7 @@ a5.Package('a5.cl.plugins.hashManager')
 	.Prototype('CLHashEvent', function(cls, im, CLHashEvent){
 		
 		CLHashEvent.HASH_CHANGE = 'clHashChangeEvent';
+		CLHashEvent.HASH_WILL_CHANGE = 'clHashWillChangeEvent';
 		
 		cls.CLHashEvent = function(){
 			cls.superclass(this);
@@ -4681,6 +4797,7 @@ a5.Package('a5.cl.mvc')
 			cls.configDefaults({
 				rootController: null,
 				rootViewDef: null,
+				applicationViewPath:'views/',
 				rootWindow:null
 			});
 			cls.createMainConfigMethod('filters');
@@ -4740,7 +4857,7 @@ a5.Package('a5.cl.mvc')
 		this.applicationRenderTarget = function(view){
 			if(view !== undefined){
 				_application.renderTarget(view);
-				return this
+				return this;
 			}
 			return _application.renderTarget();
 		}
@@ -4753,9 +4870,9 @@ a5.Package('a5.cl.mvc')
 			} else {
 				_application = cls.create(a5.cl.CLApplication);
 			}
-			if(cls.cl().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
-			else if(cls.cl().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
-			else if (cls.cl().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
+			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
+			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
+			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
 			_redrawEngine = cls.create(a5.cl.mvc.core.RedrawEngine);
 			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
 			_mappings = cls.create(a5.cl.mvc.core.Mappings);
@@ -4763,12 +4880,13 @@ a5.Package('a5.cl.mvc')
 			_hash = cls.plugins().HashManager();
 			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
 			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
+			_application.view().initialize();
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
 			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
-			a5.cl.core.Utils.purgeBody();
+			a5.cl.initializers.dom.Utils.purgeBody();
 			cls.application().view().draw();
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
@@ -4818,7 +4936,7 @@ a5.Package('a5.cl.mvc')
 		cls.setTitle = function(value, append){
 			var str = cls.config().appName,
 			delimiter = cls.config().titleDelimiter;
-			if(value !== undefined){
+			if(value !== undefined && value != ""){
 				if(append === true)
 					str = str + delimiter + value;
 				else if (append !== undefined)
@@ -4869,6 +4987,7 @@ a5.Package('a5.cl.mvc')
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
+			cls.dispatchEvent('CONTROLLER_CHANGE');
 		}	
 		
 		var eHashChangeHandler = function(e){
@@ -4876,8 +4995,7 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		cls.Override.initializeAddOn = function(){
-			var resourceCache = a5.cl.core.ResourceCache.instance(),
-				isAsync = false,
+			var isAsync = false,
 				cfg = cls.pluginConfig();
 			
 			var generateWindow = function(){

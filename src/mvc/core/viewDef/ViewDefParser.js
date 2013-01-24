@@ -168,9 +168,9 @@ a5.Package('a5.cl.core.viewDef')
 		}
 		
 		proto._cl_getDefinitionNode = function(){
-			var clientEnvironment = this.cl()._core().envManager().clientEnvironment(true).toUpperCase(),
-				clientPlatform = this.cl()._core().envManager().clientPlatform().toUpperCase(),
-				clientOrientation = this.cl()._core().envManager().clientOrientation().toUpperCase(),
+			var clientEnvironment = this.DOM().clientEnvironment(true).toUpperCase(),
+				clientPlatform = this.DOM().clientPlatform().toUpperCase(),
+				clientOrientation = this.DOM().clientOrientation().toUpperCase(),
 				defNode = ViewDefParser.getElementsByTagName(this._cl_xml.documentElement, 'Definition'),
 				definition = (defNode && defNode.length > 0) ? defNode[0] : null,
 				env = ViewDefParser._cl_getEnvironmentNode(definition, 'Environment', clientEnvironment);

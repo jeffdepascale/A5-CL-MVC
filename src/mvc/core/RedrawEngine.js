@@ -15,7 +15,7 @@ a5.Package('a5.cl.mvc.core')
 		this.RedrawEngine = function(){
 			self.superclass(this);
 			appContainer = self.cl().MVC().application().view();
-			animFrameHook = a5.cl.core.Utils.getVendorWindowMethod('requestAnimationFrame');
+			animFrameHook = a5.cl.initializers.dom.Utils.getVendorWindowMethod('requestAnimationFrame');
 			self.cl().addEventListener(im.CLEvent.PLUGINS_LOADED, ePluginsLoaded);
 		}
 		

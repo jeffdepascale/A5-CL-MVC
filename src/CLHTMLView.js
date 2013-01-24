@@ -65,6 +65,10 @@ a5.Package('a5.cl')
 			return this._cl_viewElement;
 		}
 		
+		proto.elemID = function(id){
+			this._cl_viewElement.id = id;
+		}
+		
 		/**
 		 * If true, clicks are processed, which enabled the functionality for handleAnchors and handleHrefClick().  Defaults to true.
 		 * 
@@ -92,7 +96,7 @@ a5.Package('a5.cl')
 				anchorIndex = href ? href.indexOf('#') : null;
 				anchorValid = false;
 				if(typeof href !== 'undefined'){
-					if (anchorIndex === 0 || href.substr(0, anchorIndex - 1) === this.cl().appPath(true)) 
+					if (anchorIndex === 0 || href.substr(0, anchorIndex - 1) === this.DOM().appPath(true)) 
 						anchorValid = true;
 					if (this._cl_handleAnchors && anchorValid) {
 						this.scrollToAnchor(href.substr(anchorIndex + 1));
@@ -187,7 +191,7 @@ a5.Package('a5.cl')
 			if (typeof url == 'string') {
 				this._cl_loadURL = url;
 				var self = this;
-				this.cl().include(url, function(value){
+				this.cl().initializer().load(url, function(value){
 					self.drawHTML(value);
 				})
 				return this;
@@ -225,7 +229,7 @@ a5.Package('a5.cl')
 		proto.css = function(prop, value, getBrowserImplementation){
 			getBrowserImplementation = getBrowserImplementation || false;
 			if(getBrowserImplementation)
-				prop = a5.cl.core.Utils.getCSSProp(prop);
+				prop = a5.cl.initializers.dom.Utils.getCSSProp(prop);
 			if(prop)
 			this._cl_viewElement.style[prop] = value;
 			return this;
@@ -285,7 +289,7 @@ a5.Package('a5.cl')
 				if(suppressRender !== true)
 					this._cl_render();
 				
-				if(!this._cl_isInDocument && a5.cl.core.Utils.elementInDocument(this._cl_viewElement)) {
+				if(!this._cl_isInDocument && a5.cl.initializers.dom.Utils.elementInDocument(this._cl_viewElement)) {
 					this._cl_isInDocument = true;
 					if (this._cl_viewElement.innerHTML !== "" && (this._cl_width.auto || this._cl_height.auto)){
 						var nodes = [];

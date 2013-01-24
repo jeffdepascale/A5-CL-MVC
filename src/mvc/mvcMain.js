@@ -23,6 +23,7 @@ a5.Package('a5.cl.mvc')
 			cls.configDefaults({
 				rootController: null,
 				rootViewDef: null,
+				applicationViewPath:'views/',
 				rootWindow:null
 			});
 			cls.createMainConfigMethod('filters');
@@ -82,7 +83,7 @@ a5.Package('a5.cl.mvc')
 		this.applicationRenderTarget = function(view){
 			if(view !== undefined){
 				_application.renderTarget(view);
-				return this
+				return this;
 			}
 			return _application.renderTarget();
 		}
@@ -95,9 +96,9 @@ a5.Package('a5.cl.mvc')
 			} else {
 				_application = cls.create(a5.cl.CLApplication);
 			}
-			if(cls.cl().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
-			else if(cls.cl().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
-			else if (cls.cl().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
+			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
+			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
+			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
 			_redrawEngine = cls.create(a5.cl.mvc.core.RedrawEngine);
 			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
 			_mappings = cls.create(a5.cl.mvc.core.Mappings);
@@ -111,7 +112,7 @@ a5.Package('a5.cl.mvc')
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
-			a5.cl.core.Utils.purgeBody();
+			a5.cl.initializers.dom.Utils.purgeBody();
 			cls.application().view().draw();
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
@@ -161,7 +162,7 @@ a5.Package('a5.cl.mvc')
 		cls.setTitle = function(value, append){
 			var str = cls.config().appName,
 			delimiter = cls.config().titleDelimiter;
-			if(value !== undefined){
+			if(value !== undefined && value != ""){
 				if(append === true)
 					str = str + delimiter + value;
 				else if (append !== undefined)
@@ -212,6 +213,7 @@ a5.Package('a5.cl.mvc')
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
+			cls.dispatchEvent('CONTROLLER_CHANGE');
 		}	
 		
 		var eHashChangeHandler = function(e){
@@ -219,8 +221,7 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		cls.Override.initializeAddOn = function(){
-			var resourceCache = a5.cl.core.ResourceCache.instance(),
-				isAsync = false,
+			var isAsync = false,
 				cfg = cls.pluginConfig();
 			
 			var generateWindow = function(){
