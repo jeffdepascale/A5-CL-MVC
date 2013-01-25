@@ -121,7 +121,7 @@ a5.Package('a5.cl.core.viewDef')
 			if(this._cl_rootView)
 				this._cl_definitionNode = this._cl_getDefinitionNode();
 			var firstChild = im.XMLUtils.children(this._cl_definitionNode)[0],
-				builder = this.create(a5.cl.core.viewDef.ViewBuilder, [this._cl_controller, firstChild, this._cl_defaultsNode, this._cl_imports, this._cl_rootView]);
+				builder = new a5.cl.core.viewDef.ViewBuilder(this._cl_controller, firstChild, this._cl_defaultsNode, this._cl_imports, this._cl_rootView);
 			
 			builder.build(
 				//view ready

@@ -333,7 +333,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				case 500:
 					if(!info._a5_initialized)
-						info = self.create(a5.Error, [info]);
+						info = new a5.Error(info);
 					msg = info.toString();
 					break;
 				default:
@@ -422,9 +422,9 @@ a5.Package('a5.cl.mvc.core')
 		proto.AppViewContainer = function(){
 			proto.superclass(this);
 			this._cl_errorStopped = false;
-			this._cl_systemWindowContainer = this.create(im.WindowContainer);		
-			this._cl_appWindowContainer = this.create(im.WindowContainer);
-			this._cl_appWindowLoadingContainer = this.create(im.WindowContainer);
+			this._cl_systemWindowContainer = new im.WindowContainer();		
+			this._cl_appWindowContainer = new im.WindowContainer();
+			this._cl_appWindowLoadingContainer = new im.WindowContainer();
 			this.showOverflow(true);
 			this._cl_addedToTree();
 		}
@@ -1273,7 +1273,7 @@ a5.Package("a5.cl")
 		 */
 		proto.viewReady = function(){
 			this._cl_viewIsReady = true;
-			this.dispatchEvent(this.create(im.CLViewEvent, [im.CLViewEvent.VIEW_READY]));
+			this.dispatchEvent(new im.CLViewEvent(im.CLViewEvent.VIEW_READY));
 		}
 		
 		proto.viewIsReady = function(){
@@ -1601,7 +1601,7 @@ a5.Package("a5.cl")
 			//if this view has received a vdViewReady() call, and its parent is still being built, alert the parent
 			if (this._cl_vdViewIsReady && parentView._cl_buildingFromViewDef)
 				parentView._cl_vdViewAdded();
-			this.dispatchEvent(this.create(im.CLEvent, [im.CLEvent.ADDED_TO_PARENT]));
+			this.dispatchEvent(new im.CLEvent(im.CLEvent.ADDED_TO_PARENT));
 		}
 		
 		proto._cl_removedFromParent = function(parentView){
@@ -1610,7 +1610,7 @@ a5.Package("a5.cl")
 			if(this._cl_viewElement)
 				this._cl_viewElement.style.display = 'none';
 			this._cl_initialRenderComplete = false;
-			this.dispatchEvent(this.create(im.CLEvent, [im.CLEvent.REMOVED_FROM_PARENT]));
+			this.dispatchEvent(new im.CLEvent(im.CLEvent.REMOVED_FROM_PARENT));
 		}
 		
 		proto._cl_propGetSet = function(prop, value, type){
@@ -2057,7 +2057,7 @@ a5.Package('a5.cl.core.viewDef')
 			if(this._cl_rootView)
 				this._cl_definitionNode = this._cl_getDefinitionNode();
 			var firstChild = im.XMLUtils.children(this._cl_definitionNode)[0],
-				builder = this.create(a5.cl.core.viewDef.ViewBuilder, [this._cl_controller, firstChild, this._cl_defaultsNode, this._cl_imports, this._cl_rootView]);
+				builder = new a5.cl.core.viewDef.ViewBuilder(this._cl_controller, firstChild, this._cl_defaultsNode, this._cl_imports, this._cl_rootView);
 			
 			builder.build(
 				//view ready
@@ -2218,14 +2218,15 @@ a5.Package('a5.cl.core.viewDef')
 					} else if(!this._cl_id || im.Utils.arrayIndexOf(this._cl_ids, this._cl_id) === -1) {							
 						var classDef = this._cl_imports[this._cl_viewName] || im.ViewDefParser._cl_resolveQualifiedClass(this._cl_viewName, this._cl_imports);
 						if(!classDef){
-							this.redirect(500, 'Error parsing the view definition. ' + im.XMLUtils.localName(xml) + ' could not be found.  Make sure this class was imported into the view definition and included in the dependencies.');
+							this.redirect(500, 'Error parsing the view definition for controller "' + this._cl_controller.namespace() + '". ' + im.XMLUtils.localName(xml) + ' could not be found. \
+							Make sure this class was imported into the view definition and included in the dependencies.');
 							return;
 						}
 						//check if constructor params were set on this node
 						var constructAttr = im.XMLUtils.getNamedItemNS(xml.attributes, 'Construct', ns, nsPrefix),
 							constructParams = constructAttr ? im.ViewDefParser.processAttribute(constructAttr.value) : [];
 						//create an instance
-						view = this.create(classDef, constructParams);
+						view =a5.Create(classDef, constructParams);
 						if(view instanceof im.CLView) {
 							//if it's a CLView, send it to this._cl_viewCreated()
 							this._cl_viewCreated(view);
@@ -2241,7 +2242,7 @@ a5.Package('a5.cl.core.viewDef')
 							controller.generateView(this._cl_viewCreated, this);
 						}
 					} else {
-						this.redirect(500, 'Error: Duplicate id (' + this._cl_id + ') found in view definition.');
+						this.redirect(500, 'Error: Duplicate id (' + this._cl_id + ') found in view definition for controller "' + this._cl_controller.namespace() + '".');
 						return;
 					}
 				} else {
@@ -2304,7 +2305,7 @@ a5.Package('a5.cl.core.viewDef')
 					return;
 				} else if(!hasController || this._cl_view === this._cl_rootView){
 					//otherwise, assume it's a subview, and build it.
-					var builder = this.create(im.ViewBuilder, [this._cl_controller, thisChild, this._cl_defaults, this._cl_imports, this._cl_rootView, this._cl_ids]);
+					var builder = new im.ViewBuilder(this._cl_controller, thisChild, this._cl_defaults, this._cl_imports, this._cl_rootView, this._cl_ids);
 					builder.build(this._cl_viewReadyHandler, this._cl_buildCompleteHandler, this);
 				} else {
 					this.throwError("Error parsing view definition for " + this._cl_controller.id() + ".  Views cannot be applied to the controller '" + this._cl_view._cl_controller.id() + "'.  Use a separate view definition to define the view structure for each controller.");
@@ -4159,7 +4160,7 @@ a5.Package('a5.cl')
 				this._cl_viewCreated(defaultView);
 				this._cl_viewReady();
 			} else if(defaultView === true){
-				this._cl_viewCreated(this.create(a5.cl.CLViewContainer));
+				this._cl_viewCreated(new a5.cl.CLViewContainer());
 				this._cl_viewReady();
 			}
 		}
@@ -4212,7 +4213,7 @@ a5.Package('a5.cl')
 							isAssumed = true;
 							url = this.MVC().pluginConfig().applicationViewPath + this.mvcName() + '.xml';
 						} else {
-							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
+							url = ((this._cl_defaultViewDef.indexOf('://') == -1 && this._cl_defaultViewDef.charAt(0) !== "/" ) ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
 					}					
 					this.cl().initializer().load(url, function(xml){
@@ -4220,7 +4221,7 @@ a5.Package('a5.cl')
 					}, null, function(e){
 						//if an error occurred while loading the viewdef, throw a 404
 						if (isAssumed) {
-							self._cl_viewCreated(self.create(a5.cl.CLViewContainer));
+							self._cl_viewCreated(new a5.cl.CLViewContainer());
 							self._cl_viewReady();
 							callback.call(scope, self._cl_view);
 						} else {
@@ -4399,7 +4400,7 @@ a5.Package('a5.cl')
 		proto._cl_buildViewDef = function(viewDef, callback, scope){
 			this._cl_viewDefCallback = callback;
 			this._cl_viewDefCallbackScope = scope;
-			this._cl_viewDefParser = this.create(im.ViewDefParser, [viewDef, this]);
+			this._cl_viewDefParser = new im.ViewDefParser(viewDef, this);
 			this._cl_viewDefParser.parse(this._cl_viewCreated, this._cl_viewDefComplete, this);
 		}
 		
@@ -4462,7 +4463,7 @@ a5.Package("a5.cl")
 			this.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
-			this._cl_view = this.create(a5.cl.mvc.core.AppViewContainer);
+			this._cl_view = new a5.cl.mvc.core.AppViewContainer();
 			this.viewReady();
 			return [false];
 		}
@@ -4588,13 +4589,17 @@ a5.Package("a5.cl")
 						}
 					}
 				}
-				var win = this.create(a5.cl.mvc.core.SystemWindow);
+				var win = new a5.cl.mvc.core.SystemWindow();
 				this.addWindow(win);
 				win.scrollYEnabled(true).scrollXEnabled(true);
 				var htmlView = a5.Create(a5.cl.CLHTMLView);
 				htmlView.height('auto').padding(30).alignX('center').alignY('middle');
 				win.addSubView(htmlView);
-				htmlView.drawHTML(a5.cl.core.Utils.generateSystemHTMLTemplate(type, trace));	
+				htmlView.drawHTML('<div style="margin:0px auto;text-align:center;font-family:Arial;">\
+					<div style="border-bottom: 1px solid;font-family: Arial;font-size: 20px;font-weight: bold;margin-bottom: 10px;">\
+					A5 CL: ' + type + ' Error\
+					</div>\
+					<div style="text-align:left;margin-bottom:50px;">' + trace + '</div></div>');
 				if (type == 500) {
 					this._cl_errorStopped = true;
 					a5.cl.core.GlobalUpdateTimer.instance()._cl_killTimer();
@@ -4866,21 +4871,21 @@ a5.Package('a5.cl.mvc')
 		cls.Override.initializePlugin = function(){
 			var appCls = a5.GetNamespace(cls.cl().applicationPackage(true) + '.Application');
 			if (appCls) {
-				_application = cls.create(appCls);
+				_application = new appCls();
 				if(!_application instanceof a5.cl.CLApplication) throw 'Error: application must extend a5.cl.CLApplication.';
 			} else {
-				_application = cls.create(a5.cl.CLApplication);
+				_application = new a5.cl.CLApplication();
 			}
 			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
 			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
 			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
-			_redrawEngine = cls.create(a5.cl.mvc.core.RedrawEngine);
-			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
-			_mappings = cls.create(a5.cl.mvc.core.Mappings);
-			_filters = cls.create(a5.cl.mvc.core.Filters);
+			_redrawEngine = new a5.cl.mvc.core.RedrawEngine();
+			_envManager = new a5.cl.mvc.core.EnvManager();
+			_mappings = new a5.cl.mvc.core.Mappings();
+			_filters = new a5.cl.mvc.core.Filters();
 			_hash = cls.plugins().HashManager();
-			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
-			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
+			_garbageCollector = new a5.cl.mvc.core.GarbageCollector();
+			_locationManager = new a5.cl.mvc.core.LocationManager();
 			_application.view().initialize();
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
 			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
@@ -5013,7 +5018,7 @@ a5.Package('a5.cl.mvc')
 			}
 			
 			var windowAssetsCached = function(namespace){
-				_window = cls.create(namespace);
+				_window = new namespace();
 				controller._cl_view = _window;
 				windowViewLoaded();
 			}
@@ -5033,7 +5038,7 @@ a5.Package('a5.cl.mvc')
 			var controllerNS;
 			if (cfg.rootController) {
 				if(cfg.rootController.indexOf('.') !== -1)
-					controller = cls.create(a5.GetNamespace(cfg.rootController));
+					controller = a5.Create(a5.GetNamespace(cfg.rootController));
 				else	
 					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
@@ -5054,7 +5059,7 @@ a5.Package('a5.cl.mvc')
 							cls.redirect(500, "No mapping created for default '/' mapping.")
 						}
 				});
-				controller = cls.create('a5.cl.mvc.core.RootController');	
+				controller = new a5.cl.mvc.core.RootController();	
 				controllerNS = 'a5.cl.mvc.core.RootController';
 			}
 			cls.addMapping({desc:'/', controller:controllerNS}, true);

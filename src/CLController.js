@@ -52,7 +52,7 @@ a5.Package('a5.cl')
 				this._cl_viewCreated(defaultView);
 				this._cl_viewReady();
 			} else if(defaultView === true){
-				this._cl_viewCreated(this.create(a5.cl.CLViewContainer));
+				this._cl_viewCreated(new a5.cl.CLViewContainer());
 				this._cl_viewReady();
 			}
 		}
@@ -105,7 +105,7 @@ a5.Package('a5.cl')
 							isAssumed = true;
 							url = this.MVC().pluginConfig().applicationViewPath + this.mvcName() + '.xml';
 						} else {
-							url = (this._cl_defaultViewDef.indexOf('://') == -1 ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
+							url = ((this._cl_defaultViewDef.indexOf('://') == -1 && this._cl_defaultViewDef.charAt(0) !== "/" ) ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
 					}					
 					this.cl().initializer().load(url, function(xml){
@@ -113,7 +113,7 @@ a5.Package('a5.cl')
 					}, null, function(e){
 						//if an error occurred while loading the viewdef, throw a 404
 						if (isAssumed) {
-							self._cl_viewCreated(self.create(a5.cl.CLViewContainer));
+							self._cl_viewCreated(new a5.cl.CLViewContainer());
 							self._cl_viewReady();
 							callback.call(scope, self._cl_view);
 						} else {
@@ -292,7 +292,7 @@ a5.Package('a5.cl')
 		proto._cl_buildViewDef = function(viewDef, callback, scope){
 			this._cl_viewDefCallback = callback;
 			this._cl_viewDefCallbackScope = scope;
-			this._cl_viewDefParser = this.create(im.ViewDefParser, [viewDef, this]);
+			this._cl_viewDefParser = new im.ViewDefParser(viewDef, this);
 			this._cl_viewDefParser.parse(this._cl_viewCreated, this._cl_viewDefComplete, this);
 		}
 		

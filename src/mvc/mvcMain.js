@@ -91,21 +91,21 @@ a5.Package('a5.cl.mvc')
 		cls.Override.initializePlugin = function(){
 			var appCls = a5.GetNamespace(cls.cl().applicationPackage(true) + '.Application');
 			if (appCls) {
-				_application = cls.create(appCls);
+				_application = new appCls();
 				if(!_application instanceof a5.cl.CLApplication) throw 'Error: application must extend a5.cl.CLApplication.';
 			} else {
-				_application = cls.create(a5.cl.CLApplication);
+				_application = new a5.cl.CLApplication();
 			}
 			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
 			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
 			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
-			_redrawEngine = cls.create(a5.cl.mvc.core.RedrawEngine);
-			_envManager = cls.create(a5.cl.mvc.core.EnvManager);
-			_mappings = cls.create(a5.cl.mvc.core.Mappings);
-			_filters = cls.create(a5.cl.mvc.core.Filters);
+			_redrawEngine = new a5.cl.mvc.core.RedrawEngine();
+			_envManager = new a5.cl.mvc.core.EnvManager();
+			_mappings = new a5.cl.mvc.core.Mappings();
+			_filters = new a5.cl.mvc.core.Filters();
 			_hash = cls.plugins().HashManager();
-			_garbageCollector = cls.create(a5.cl.mvc.core.GarbageCollector);
-			_locationManager = cls.create(a5.cl.mvc.core.LocationManager);
+			_garbageCollector = new a5.cl.mvc.core.GarbageCollector();
+			_locationManager = new a5.cl.mvc.core.LocationManager();
 			_application.view().initialize();
 			_locationManager.addEventListener('CONTROLLER_CHANGE', eControllerChangeHandler);
 			_hash.addEventListener(im.CLHashEvent.HASH_CHANGE, eHashChangeHandler);
@@ -238,7 +238,7 @@ a5.Package('a5.cl.mvc')
 			}
 			
 			var windowAssetsCached = function(namespace){
-				_window = cls.create(namespace);
+				_window = new namespace();
 				controller._cl_view = _window;
 				windowViewLoaded();
 			}
@@ -258,7 +258,7 @@ a5.Package('a5.cl.mvc')
 			var controllerNS;
 			if (cfg.rootController) {
 				if(cfg.rootController.indexOf('.') !== -1)
-					controller = cls.create(a5.GetNamespace(cfg.rootController));
+					controller = a5.Create(a5.GetNamespace(cfg.rootController));
 				else	
 					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
@@ -279,7 +279,7 @@ a5.Package('a5.cl.mvc')
 							cls.redirect(500, "No mapping created for default '/' mapping.")
 						}
 				});
-				controller = cls.create('a5.cl.mvc.core.RootController');	
+				controller = new a5.cl.mvc.core.RootController();	
 				controllerNS = 'a5.cl.mvc.core.RootController';
 			}
 			cls.addMapping({desc:'/', controller:controllerNS}, true);

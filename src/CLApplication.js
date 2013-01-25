@@ -28,7 +28,7 @@ a5.Package("a5.cl")
 			this.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
 			this.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
-			this._cl_view = this.create(a5.cl.mvc.core.AppViewContainer);
+			this._cl_view = new a5.cl.mvc.core.AppViewContainer();
 			this.viewReady();
 			return [false];
 		}
@@ -154,13 +154,17 @@ a5.Package("a5.cl")
 						}
 					}
 				}
-				var win = this.create(a5.cl.mvc.core.SystemWindow);
+				var win = new a5.cl.mvc.core.SystemWindow();
 				this.addWindow(win);
 				win.scrollYEnabled(true).scrollXEnabled(true);
 				var htmlView = a5.Create(a5.cl.CLHTMLView);
 				htmlView.height('auto').padding(30).alignX('center').alignY('middle');
 				win.addSubView(htmlView);
-				htmlView.drawHTML(a5.cl.core.Utils.generateSystemHTMLTemplate(type, trace));	
+				htmlView.drawHTML('<div style="margin:0px auto;text-align:center;font-family:Arial;">\
+					<div style="border-bottom: 1px solid;font-family: Arial;font-size: 20px;font-weight: bold;margin-bottom: 10px;">\
+					A5 CL: ' + type + ' Error\
+					</div>\
+					<div style="text-align:left;margin-bottom:50px;">' + trace + '</div></div>');
 				if (type == 500) {
 					this._cl_errorStopped = true;
 					a5.cl.core.GlobalUpdateTimer.instance()._cl_killTimer();

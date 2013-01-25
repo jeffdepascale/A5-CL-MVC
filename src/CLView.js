@@ -617,7 +617,7 @@ a5.Package("a5.cl")
 		 */
 		proto.viewReady = function(){
 			this._cl_viewIsReady = true;
-			this.dispatchEvent(this.create(im.CLViewEvent, [im.CLViewEvent.VIEW_READY]));
+			this.dispatchEvent(new im.CLViewEvent(im.CLViewEvent.VIEW_READY));
 		}
 		
 		proto.viewIsReady = function(){
@@ -945,7 +945,7 @@ a5.Package("a5.cl")
 			//if this view has received a vdViewReady() call, and its parent is still being built, alert the parent
 			if (this._cl_vdViewIsReady && parentView._cl_buildingFromViewDef)
 				parentView._cl_vdViewAdded();
-			this.dispatchEvent(this.create(im.CLEvent, [im.CLEvent.ADDED_TO_PARENT]));
+			this.dispatchEvent(new im.CLEvent(im.CLEvent.ADDED_TO_PARENT));
 		}
 		
 		proto._cl_removedFromParent = function(parentView){
@@ -954,7 +954,7 @@ a5.Package("a5.cl")
 			if(this._cl_viewElement)
 				this._cl_viewElement.style.display = 'none';
 			this._cl_initialRenderComplete = false;
-			this.dispatchEvent(this.create(im.CLEvent, [im.CLEvent.REMOVED_FROM_PARENT]));
+			this.dispatchEvent(new im.CLEvent(im.CLEvent.REMOVED_FROM_PARENT));
 		}
 		
 		proto._cl_propGetSet = function(prop, value, type){

@@ -78,14 +78,15 @@ a5.Package('a5.cl.core.viewDef')
 					} else if(!this._cl_id || im.Utils.arrayIndexOf(this._cl_ids, this._cl_id) === -1) {							
 						var classDef = this._cl_imports[this._cl_viewName] || im.ViewDefParser._cl_resolveQualifiedClass(this._cl_viewName, this._cl_imports);
 						if(!classDef){
-							this.redirect(500, 'Error parsing the view definition. ' + im.XMLUtils.localName(xml) + ' could not be found.  Make sure this class was imported into the view definition and included in the dependencies.');
+							this.redirect(500, 'Error parsing the view definition for controller "' + this._cl_controller.namespace() + '". ' + im.XMLUtils.localName(xml) + ' could not be found. \
+							Make sure this class was imported into the view definition and included in the dependencies.');
 							return;
 						}
 						//check if constructor params were set on this node
 						var constructAttr = im.XMLUtils.getNamedItemNS(xml.attributes, 'Construct', ns, nsPrefix),
 							constructParams = constructAttr ? im.ViewDefParser.processAttribute(constructAttr.value) : [];
 						//create an instance
-						view = this.create(classDef, constructParams);
+						view =a5.Create(classDef, constructParams);
 						if(view instanceof im.CLView) {
 							//if it's a CLView, send it to this._cl_viewCreated()
 							this._cl_viewCreated(view);
@@ -101,7 +102,7 @@ a5.Package('a5.cl.core.viewDef')
 							controller.generateView(this._cl_viewCreated, this);
 						}
 					} else {
-						this.redirect(500, 'Error: Duplicate id (' + this._cl_id + ') found in view definition.');
+						this.redirect(500, 'Error: Duplicate id (' + this._cl_id + ') found in view definition for controller "' + this._cl_controller.namespace() + '".');
 						return;
 					}
 				} else {
@@ -164,7 +165,7 @@ a5.Package('a5.cl.core.viewDef')
 					return;
 				} else if(!hasController || this._cl_view === this._cl_rootView){
 					//otherwise, assume it's a subview, and build it.
-					var builder = this.create(im.ViewBuilder, [this._cl_controller, thisChild, this._cl_defaults, this._cl_imports, this._cl_rootView, this._cl_ids]);
+					var builder = new im.ViewBuilder(this._cl_controller, thisChild, this._cl_defaults, this._cl_imports, this._cl_rootView, this._cl_ids);
 					builder.build(this._cl_viewReadyHandler, this._cl_buildCompleteHandler, this);
 				} else {
 					this.throwError("Error parsing view definition for " + this._cl_controller.id() + ".  Views cannot be applied to the controller '" + this._cl_view._cl_controller.id() + "'.  Use a separate view definition to define the view structure for each controller.");

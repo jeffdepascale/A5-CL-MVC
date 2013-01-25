@@ -25,7 +25,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				case 500:
 					if(!info._a5_initialized)
-						info = self.create(a5.Error, [info]);
+						info = new a5.Error(info);
 					msg = info.toString();
 					break;
 				default:
