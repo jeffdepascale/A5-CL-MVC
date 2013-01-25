@@ -309,18 +309,19 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_replaceNodeValue = function(node, value){
+			var self = this;
 			function checkUpdated(){
-				if(!this._cl_initialized){
-					this.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
+				if(!self._cl_initialized){
+					self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
 					return;
 				}
 				if (node.innerHTML !== "") {
 					//if auto width/height, set back to auto
 					if(autoWidth) node.style.width = 'auto';
 					if(autoHeight) node.style.height = 'auto';
-					this.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
-					this.dispatchEvent('CONTENT_UPDATED');
-					this.htmlUpdated(false);
+					self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
+					self.dispatchEvent('CONTENT_UPDATED');
+					self.htmlUpdated(false);
 				}
 			}
 			
