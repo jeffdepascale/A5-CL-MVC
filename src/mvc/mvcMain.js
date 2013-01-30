@@ -96,9 +96,6 @@ a5.Package('a5.cl.mvc')
 			} else {
 				_application = new a5.cl.CLApplication();
 			}
-			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
-			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
-			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
 			_redrawEngine = new a5.cl.mvc.core.RedrawEngine();
 			_envManager = new a5.cl.mvc.core.EnvManager();
 			_mappings = new a5.cl.mvc.core.Mappings();
@@ -118,6 +115,9 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		var eApplicationPreparedHandler = function(){
+			if(cls.DOM().clientEnvironment() == 'MOBILE') a5.cl.mvc.core.AppSetup.mobileSetup(); 
+			else if(cls.DOM().clientEnvironment() == 'TABLET') a5.cl.mvc.core.AppSetup.tabletSetup();
+			else if (cls.DOM().clientEnvironment() == 'DESKTOP') a5.cl.mvc.core.AppSetup.desktopSetup();
 			var $filters = cls.getMainConfigProps('filters');
 			_filters.addAppFilters($filters);
 			var $mappings = cls.getMainConfigProps('mappings');
@@ -160,8 +160,8 @@ a5.Package('a5.cl.mvc')
 		}
 		
 		cls.setTitle = function(value, append){
-			var str = cls.config().appName,
-			delimiter = cls.config().titleDelimiter;
+			var str = cls.cl().appName(),
+				delimiter = cls.MVC().pluginConfig().titleDelimiter;
 			if(value !== undefined && value != ""){
 				if(append === true)
 					str = str + delimiter + value;

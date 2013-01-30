@@ -1,19 +1,19 @@
 
 a5.SetNamespace('a5.cl.mvc.core.AppSetup', {
 	genericSetup:function(){
-		a5.cl.instance().MVC().setTitle();	
+		a5.cl.Instance().MVC().setTitle();	
 	},
 	desktopSetup:function(){
-		if(a5.cl.instance().config().faviconPath){
+		if(a5.cl.Instance().MVC().pluginConfig().faviconPath){
 			var headID = document.getElementsByTagName("head")[0],
 			elem = document.createElement('link');
 			elem.rel = "shortcut icon";
-			elem.href= a5.cl.instance().config().faviconPath;
+			elem.href= a5.cl.Instance().MVC().pluginConfig().faviconPath;
 			elem.type = "image/x-icon";
 			headID.appendChild(elem);
 			elem = null;
 		}
-		if (a5.cl.instance().config().forceIE7) {
+		if (a5.cl.Instance().DOM().pluginConfig().forceIE7) {
 			var headID = document.getElementsByTagName("head")[0],
 			elem = document.createElement('meta');
 			elem.httpEquiv = "X-UA-Compatible";
