@@ -1065,7 +1065,8 @@ a5.Package("a5.cl")
 			//capture phase
 			e._a5_phase = a5.EventPhase.CAPTURING;
 			for(var x = 0, y = viewChain.length ; x < y; x++){
-				this._a5_dispatchEvent.call(viewChain[x], e);
+				if(this._a5_initialized)
+					this._a5_dispatchEvent.call(viewChain[x], e);
 			}
 			
 			//target phase
@@ -1076,7 +1077,8 @@ a5.Package("a5.cl")
 			if(e.bubbles()){
 				e._a5_phase = a5.EventPhase.BUBBLING;
 				for(var x = viewChain.length - 1; x >= 0; x--){
-					this._a5_dispatchEvent.call(viewChain[x], e);
+					if(this._a5_initialized)
+						this._a5_dispatchEvent.call(viewChain[x], e);
 				}
 			}
 			if(!e.shouldRetain()) e.destroy();

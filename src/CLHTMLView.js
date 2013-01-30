@@ -7,6 +7,10 @@
 a5.Package('a5.cl')
 	
 	.Import('a5.cl.CLEvent')
+	.Static(function(CLHTMLView){
+		
+		CLHTMLView.CONTENT_UPDATED = 'clHTMLViewContentUpdated';
+	})
 	.Extends('CLView')
 	.Prototype('CLHTMLView', function(proto, im, CLHTMLView){
 		
@@ -28,13 +32,19 @@ a5.Package('a5.cl')
 			this._cl_loadURL = null;
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
+			this._cl_htmlViewReady = false;
 		});
 		
-		proto.CLHTMLView = function(html){
+		proto.CLHTMLView = function(val, isURL){
 			proto.superclass(this);
 			this.clickHandlingEnabled(true);
-			if(html !== undefined)
-				this.drawHTML(html);
+			this.width('100%').height('100%');
+			if (val !== undefined) {
+				if(isURL)
+					this.loadURL(val);
+				else
+					this.drawHTML(val);
+			}
 		}
 		
 		proto.Override.viewReady = function(){
@@ -67,6 +77,10 @@ a5.Package('a5.cl')
 		
 		proto.elemID = function(id){
 			this._cl_viewElement.id = id;
+		}
+		
+		proto.htmlViewReady = function(){
+			return this._cl_htmlViewReady;
 		}
 		
 		/**
@@ -175,6 +189,7 @@ a5.Package('a5.cl')
 		 * @param {String} value The html to display.
 		 */
 		proto.drawHTML = function(value, data){
+			this._cl_htmlViewReady = false;
 			//coerce value to a space if empty string to deal with errors in node replacement validation
 			if(value === "")
 				value = " ";
@@ -187,7 +202,21 @@ a5.Package('a5.cl')
 			return this;
 		}
 		
+		proto.drawElement = function(elementType){
+			var addStyle = elementType !== 'input',
+				elemID = this.instanceUID() + '_CLHtmlViewElement',
+				elem = document.createElement(this._qbr_elementType);
+				elem.id = elemID;
+			if (addStyle) {
+				elem.style.height = '100%';
+				elem.style.width = '100%';
+			}
+			this.drawHTML(elem);
+			return elemID;
+		}
+		
 		proto.loadURL = function(url){
+			this._cl_htmlViewReady = false;
 			if (typeof url == 'string') {
 				this._cl_loadURL = url;
 				var self = this;
@@ -308,22 +337,28 @@ a5.Package('a5.cl')
 			return parseInt(value.replace(/px$/i, ''));
 		}
 		
-		proto._cl_replaceNodeValue = function(node, value){
+		proto._cl_dispatchUpdated = function(){
 			var self = this;
-			function checkUpdated(){
-				if(!self._cl_initialized){
-					self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
-					return;
-				}
-				if (node.innerHTML !== "") {
-					//if auto width/height, set back to auto
-					if(autoWidth) node.style.width = 'auto';
-					if(autoHeight) node.style.height = 'auto';
-					self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
-					self.dispatchEvent('CONTENT_UPDATED');
-					self.htmlUpdated(false);
-				}
-			}
+			//Async is necessary to account for variances in browser rendering updates
+			this.async(function(){
+				this._cl_htmlViewReady = true;
+				this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);
+			});
+		}
+		
+		proto._cl_replaceNodeValue = function(node, value){
+			var self = this,
+				asyncCall = null,
+				checkUpdated = function(){
+					if (node.innerHTML !== "") {
+						//if auto width/height, set back to auto
+						if(autoWidth) node.style.width = 'auto';
+						if(autoHeight) node.style.height = 'auto';
+						asyncCall.cancel();
+						self._cl_dispatchUpdated.call(self);
+						self.htmlUpdated.call(self, false);
+					}
+				};
 			
 			//if auto width/height, change auto to zero
 			var autoWidth = (node === this._cl_viewElement) ? this._cl_width.auto : (node.style.width === 'auto'),
@@ -337,10 +372,9 @@ a5.Package('a5.cl')
 			this._cl_scrollWidth = this._cl_scrollHeight = null;
 			
 			if (value != '') {
-				this.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false, this);
+				asyncCall = this.async(checkUpdated, null, .2);
 			} else {
-				this.dispatchEvent('CONTENT_UPDATED');
-				this.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkUpdated, false);
+				self._cl_dispatchUpdated();
 				this.htmlUpdated(false);
 			}
 			if (typeof value == 'string') {
