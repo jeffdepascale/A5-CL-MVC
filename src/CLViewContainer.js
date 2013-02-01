@@ -262,17 +262,21 @@ a5.Package('a5.cl')
 		 * 
 		 */
 		proto._cl_orderChildren = function(){
+			var changed = false;
 			for (var i = 0, l = this._cl_childViews.length; i < l; i++) {
-				var thisElem = this._cl_childViews[i]._cl_viewElement,
-					scrollTop = thisElem ? thisElem.scrollTop : 0,
-					scrollLeft = thisElem ? thisElem.scrollLeft : 0;
-				this._cl_viewElement.appendChild(thisElem);
-				this._cl_childViews[i]._cl_setIndex(i);
-				this.redraw();
-				//we have to cache the scroll positions, and then reset them because doing an appendChild() resets the scroll
-				thisElem.scrollTop = scrollTop;
-				thisElem.scrollLeft = scrollLeft;
+				var childView = this._cl_childViews[i],
+					thisElem = childView._cl_viewElement;
+				if (thisElem.parentElement !== this._cl_viewElement) {
+					changed = true;
+					this._cl_viewElement.appendChild(thisElem);
+				}
+				if (childView._cl_pendingViewElementProps.zIndex !== i) {
+					changed = true;
+					childView._cl_pendingViewElementProps.zIndex = i;
+				}
 			}
+			if(changed)
+				this.redraw();
 		}
 		
 		proto._cl_addChildView = function(view, $index, callback){
@@ -577,6 +581,9 @@ a5.Package('a5.cl')
 					this._cl_pendingViewElementProps.overflowX = shouldXScroll ? 'auto' : (this._cl_showOverflow ? 'visible' : 'hidden');
 					didXScrollChange = true;
 				}
+				
+				if(didYScrollChange || didXScrollChange)
+					this._cl_pendingViewElementProps.webkitOverflowScrolling = (shouldXScroll || shouldYScroll) ? 'touch':'none';
 				
 				//if we're scrolling, adjust the inner sizes accordingly
 				this._cl_width.inner = this._cl_width.client - (this._cl_scrollYEnabled.state ? scrollBarWidth : 0);

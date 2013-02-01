@@ -343,7 +343,7 @@ a5.Package('a5.cl')
 			this.async(function(){
 				this._cl_htmlViewReady = true;
 				this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);
-			});
+			}, null, 200);
 		}
 		
 		proto._cl_replaceNodeValue = function(node, value){
