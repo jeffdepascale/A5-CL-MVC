@@ -438,7 +438,7 @@ a5.Package("a5.cl")
 			if(typeof value === 'number'){
 				if(typeof duration === 'number')
 					return this.animate(duration, {alpha:value, ease:ease});
-				if (this.DOM().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
+				if (this.DOM().clientPlatform() == 'IE' && this.DOM().browserVersion() < 9) {
 					this._cl_viewElement.style.filter = 
 						this._cl_viewElement.style.filter.replace(/alpha\(.*?\)/gi, '') 
 						+ ' alpha(opacity=' + (value * 100) + ')';
@@ -1110,7 +1110,7 @@ a5.Package("a5.cl")
 		
 		proto.dealloc = function(){
 			if(this._cl_parentView)
-				this.removeFromParentView();
+				this.removeFromParentView(false);
 			this._cl_destroyElement(this._cl_viewElement);
 			this._cl_viewElement = null;
 		}

@@ -40,26 +40,28 @@ a5.Package('a5.cl')
 		 * @description Dispatched when the render() method is called on a mappable controller.
 		 * @param {a5.cl.CLController} controller
 		 */
-		CLMVCEvent.RENDER_CONTROLLER = 'renderController';
+		CLMVCEvent.RENDER_CONTROLLER = 'clMVCEventRenderController';
+		
+		
+		CLMVCEvent.PRIMARY_CONTROLLER_CHANGE = 'clMVCEventPrimaryControllerChange';
+		/**
+		 * @event
+		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
+		 */
+		CLMVCEvent.ADDED_TO_PARENT = 'clMVCEventAddedToParent';
 		
 		/**
 		 * @event
 		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
 		 */
-		CLMVCEvent.ADDED_TO_PARENT = 'addedToParent';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLMVCEvent.REMOVED_FROM_PARENT = 'removedFromParent';
+		CLMVCEvent.REMOVED_FROM_PARENT = 'clMVCEventRemovedFromParent';
 		
 	})
 	.Class('CLMVCEvent', function(cls, im){
 		
 		cls.CLMVCEvent = function(){
 			cls.superclass(this);
-		}		
+		}	
 })
 
 
@@ -1094,7 +1096,7 @@ a5.Package("a5.cl")
 			if(typeof value === 'number'){
 				if(typeof duration === 'number')
 					return this.animate(duration, {alpha:value, ease:ease});
-				if (this.DOM().clientPlatform() == 'IE' && this.cl().browserVersion() < 9) {
+				if (this.DOM().clientPlatform() == 'IE' && this.DOM().browserVersion() < 9) {
 					this._cl_viewElement.style.filter = 
 						this._cl_viewElement.style.filter.replace(/alpha\(.*?\)/gi, '') 
 						+ ' alpha(opacity=' + (value * 100) + ')';
@@ -1766,7 +1768,7 @@ a5.Package("a5.cl")
 		
 		proto.dealloc = function(){
 			if(this._cl_parentView)
-				this.removeFromParentView();
+				this.removeFromParentView(false);
 			this._cl_destroyElement(this._cl_viewElement);
 			this._cl_viewElement = null;
 		}
@@ -3239,7 +3241,7 @@ a5.Package('a5.cl')
 			this.async(function(){
 				this._cl_htmlViewReady = true;
 				this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);
-			});
+			}, null, 200);
 		}
 		
 		proto._cl_replaceNodeValue = function(node, value){
@@ -3558,17 +3560,21 @@ a5.Package('a5.cl')
 		 * 
 		 */
 		proto._cl_orderChildren = function(){
+			var changed = false;
 			for (var i = 0, l = this._cl_childViews.length; i < l; i++) {
-				var thisElem = this._cl_childViews[i]._cl_viewElement,
-					scrollTop = thisElem ? thisElem.scrollTop : 0,
-					scrollLeft = thisElem ? thisElem.scrollLeft : 0;
-				this._cl_viewElement.appendChild(thisElem);
-				this._cl_childViews[i]._cl_setIndex(i);
-				this.redraw();
-				//we have to cache the scroll positions, and then reset them because doing an appendChild() resets the scroll
-				thisElem.scrollTop = scrollTop;
-				thisElem.scrollLeft = scrollLeft;
+				var childView = this._cl_childViews[i],
+					thisElem = childView._cl_viewElement;
+				if (thisElem.parentElement !== this._cl_viewElement) {
+					changed = true;
+					this._cl_viewElement.appendChild(thisElem);
+				}
+				if (childView._cl_pendingViewElementProps.zIndex !== i) {
+					changed = true;
+					childView._cl_pendingViewElementProps.zIndex = i;
+				}
 			}
+			if(changed)
+				this.redraw();
 		}
 		
 		proto._cl_addChildView = function(view, $index, callback){
@@ -3873,6 +3879,9 @@ a5.Package('a5.cl')
 					this._cl_pendingViewElementProps.overflowX = shouldXScroll ? 'auto' : (this._cl_showOverflow ? 'visible' : 'hidden');
 					didXScrollChange = true;
 				}
+				
+				if(didYScrollChange || didXScrollChange)
+					this._cl_pendingViewElementProps.webkitOverflowScrolling = (shouldXScroll || shouldYScroll) ? 'touch':'none';
 				
 				//if we're scrolling, adjust the inner sizes accordingly
 				this._cl_width.inner = this._cl_width.client - (this._cl_scrollYEnabled.state ? scrollBarWidth : 0);
@@ -4818,6 +4827,7 @@ a5.Package('a5.cl.plugins.hashManager')
 a5.Package('a5.cl.mvc')
 
 	.Import('a5.cl.CLEvent',
+			'a5.cl.CLMVCEvent',
 			'a5.cl.plugins.hashManager.CLHashEvent')
 	.Extends('a5.cl.CLAddon')
 	.Class('MVC', function(cls, im, MVC){
@@ -4888,6 +4898,8 @@ a5.Package('a5.cl.mvc')
 		 * @param {Boolean} [append=false]
 		 */
 		this.addMapping = function(mappingObj, append){	return this.MVC().mappings().addMapping(mappingObj, append); }
+		
+		this.controller = function(){ return controller; }
 		
 		/**
 		 * Get or set the render target for the application.
@@ -5029,7 +5041,8 @@ a5.Package('a5.cl.mvc')
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
-			cls.dispatchEvent('CONTROLLER_CHANGE');
+			controller = newController;
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGE, data);
 		}	
 		
 		var eHashChangeHandler = function(e){

@@ -2,6 +2,7 @@
 a5.Package('a5.cl.mvc')
 
 	.Import('a5.cl.CLEvent',
+			'a5.cl.CLMVCEvent',
 			'a5.cl.plugins.hashManager.CLHashEvent')
 	.Extends('a5.cl.CLAddon')
 	.Class('MVC', function(cls, im, MVC){
@@ -72,6 +73,8 @@ a5.Package('a5.cl.mvc')
 		 * @param {Boolean} [append=false]
 		 */
 		this.addMapping = function(mappingObj, append){	return this.MVC().mappings().addMapping(mappingObj, append); }
+		
+		this.controller = function(){ return controller; }
 		
 		/**
 		 * Get or set the render target for the application.
@@ -213,7 +216,8 @@ a5.Package('a5.cl.mvc')
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
 			}
-			cls.dispatchEvent('CONTROLLER_CHANGE');
+			controller = newController;
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGE, data);
 		}	
 		
 		var eHashChangeHandler = function(e){

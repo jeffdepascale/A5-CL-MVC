@@ -9,24 +9,26 @@ a5.Package('a5.cl')
 		 * @description Dispatched when the render() method is called on a mappable controller.
 		 * @param {a5.cl.CLController} controller
 		 */
-		CLMVCEvent.RENDER_CONTROLLER = 'renderController';
+		CLMVCEvent.RENDER_CONTROLLER = 'clMVCEventRenderController';
+		
+		
+		CLMVCEvent.PRIMARY_CONTROLLER_CHANGE = 'clMVCEventPrimaryControllerChange';
+		/**
+		 * @event
+		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
+		 */
+		CLMVCEvent.ADDED_TO_PARENT = 'clMVCEventAddedToParent';
 		
 		/**
 		 * @event
 		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
 		 */
-		CLMVCEvent.ADDED_TO_PARENT = 'addedToParent';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLMVCEvent.REMOVED_FROM_PARENT = 'removedFromParent';
+		CLMVCEvent.REMOVED_FROM_PARENT = 'clMVCEventRemovedFromParent';
 		
 	})
 	.Class('CLMVCEvent', function(cls, im){
 		
 		cls.CLMVCEvent = function(){
 			cls.superclass(this);
-		}		
+		}	
 })
