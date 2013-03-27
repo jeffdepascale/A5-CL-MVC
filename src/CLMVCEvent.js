@@ -11,8 +11,16 @@ a5.Package('a5.cl')
 		 */
 		CLMVCEvent.RENDER_CONTROLLER = 'clMVCEventRenderController';
 		
+		/**
+		 * @event
+		 * @description Dispatched when the first controller is loaded.
+		 * @param {a5.cl.CLController} controller
+		 */
+		CLMVCEvent.INITIAL_CONTROLLER_LOADED = 'clMVCEventControllerLoaded';
 		
-		CLMVCEvent.PRIMARY_CONTROLLER_CHANGE = 'clMVCEventPrimaryControllerChange';
+		CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE = 'clMVCEventPrimaryControllerWillChange';
+		
+		CLMVCEvent.PRIMARY_CONTROLLER_CHANGED = 'clMVCEventPrimaryControllerChanged';
 		/**
 		 * @event
 		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.

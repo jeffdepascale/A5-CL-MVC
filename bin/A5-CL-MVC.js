@@ -42,8 +42,16 @@ a5.Package('a5.cl')
 		 */
 		CLMVCEvent.RENDER_CONTROLLER = 'clMVCEventRenderController';
 		
+		/**
+		 * @event
+		 * @description Dispatched when the first controller is loaded.
+		 * @param {a5.cl.CLController} controller
+		 */
+		CLMVCEvent.INITIAL_CONTROLLER_LOADED = 'clMVCEventControllerLoaded';
 		
-		CLMVCEvent.PRIMARY_CONTROLLER_CHANGE = 'clMVCEventPrimaryControllerChange';
+		CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE = 'clMVCEventPrimaryControllerWillChange';
+		
+		CLMVCEvent.PRIMARY_CONTROLLER_CHANGED = 'clMVCEventPrimaryControllerChanged';
 		/**
 		 * @event
 		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
@@ -4691,11 +4699,7 @@ a5.Package('a5.cl.plugins.hashManager')
 		}
 		
 		cls.initialize = function(){
-			update();
-			var oldIE = cls.DOM().clientPlatform() === 'IE' && cls.DOM().browserVersion() < 9;
-			if ('onhashchange' in window && !oldIE) {
-				window.onhashchange = update;
-			} else cls.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
+			cls.cl().addEventListener(im.CLEvent.APPLICATION_LAUNCHED, eAppLaunchedHandler);
 		}
 		
 		cls.getHash = function(asString){
@@ -4751,6 +4755,14 @@ a5.Package('a5.cl.plugins.hashManager')
 			if(parsedLinks[0] === "")
 				parsedLinks.shift();
 			return parsedLinks;
+		},
+		
+		eAppLaunchedHandler = function(){
+			update();
+			var oldIE = cls.DOM().clientPlatform() === 'IE' && cls.DOM().browserVersion() < 9;
+			if ('onhashchange' in window && !oldIE) {
+				window.onhashchange = update;
+			} else cls.cl().addEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, update);
 		},
 		
 		update = function(){
@@ -5029,7 +5041,7 @@ a5.Package('a5.cl.mvc')
 				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
 				return;
 			}
-			
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE, data);
 			if(!newController._cl_mappable)
 				newController.setMappable();
 			if (typeof newController[action] === 'function'){
@@ -5040,9 +5052,10 @@ a5.Package('a5.cl.mvc')
 			if (isFirstRender) {
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
+				cls.dispatchEvent(im.CLMVCEvent.INITIAL_CONTROLLER_LOADED, data);
 			}
 			controller = newController;
-			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGE, data);
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGED, data);
 		}	
 		
 		var eHashChangeHandler = function(e){

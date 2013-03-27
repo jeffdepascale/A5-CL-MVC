@@ -204,7 +204,7 @@ a5.Package('a5.cl.mvc')
 				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
 				return;
 			}
-			
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE, data);
 			if(!newController._cl_mappable)
 				newController.setMappable();
 			if (typeof newController[action] === 'function'){
@@ -215,9 +215,10 @@ a5.Package('a5.cl.mvc')
 			if (isFirstRender) {
 				isFirstRender = false;
 				a5.cl.mvc.core.AppViewContainer.instance()._cl_initialRenderCompete();
+				cls.dispatchEvent(im.CLMVCEvent.INITIAL_CONTROLLER_LOADED, data);
 			}
 			controller = newController;
-			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGE, data);
+			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_CHANGED, data);
 		}	
 		
 		var eHashChangeHandler = function(e){
