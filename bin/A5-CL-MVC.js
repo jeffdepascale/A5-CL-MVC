@@ -854,6 +854,10 @@ a5.Package("a5.cl")
 			return val || this.instanceUID();
 		}
 		
+		proto.addCSSClass = function(name){
+			this._cl_viewElement.className += " " + name;
+		}
+		
 		/**
 		 * @name isChildOf
 		 * @param {a5.cl.CLViewContainer} target
@@ -2325,7 +2329,7 @@ a5.Package('a5.cl.core.viewDef')
 				}
 			} else {
 				//Added method check due to CLView being a possible node owner
-				if (this._cl_view._cl_vdViewReady) 
+				if (this._cl_view._cl_vdViewReady && !this._cl_view._cl_vdViewIsReady)
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);
@@ -2782,50 +2786,51 @@ a5.Package('a5.cl.mvc.core')
 		var runMatchAlgorithm = function(mapping, hashArray){
 			var retObj = {};
 			var isValid = false;
-			var isDequalified = false;
 			var hasIDProps = false;
 			for (var i = 0, l= mapping.desc.length; i <l; i++) {
-				if (!isDequalified) {
-					var isDirect = mapping.desc[i].indexOf(':') == 0;
-					if (isDirect) {
-						var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
-						var foundProp = false;
-						for (var j = 0, m = paramArray.length; j < m; j++) {
-							if (!foundProp) {
-								if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
-									foundProp = isValid = true;
-									if (i >= hashArray.length) {
-										if (!isOptional) isValid = false;
-									} else {
-										if (paramArray[j] == 'id') {
-											if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
-												isValid = false;
-											} else {
-												retObj.id = hashArray.slice(i);
-												hasIDProps = true;
-											}
-										} else retObj[paramArray[j]] = hashArray[i];
-									}
-								} else {
+				var isDirect = mapping.desc[i].indexOf(':') == 0;
+				if (isDirect) {
+					var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
+					var foundProp = false;
+					for (var j = 0, m = paramArray.length; j < m; j++) {
+						if (!foundProp) {
+							if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
+								foundProp = isValid = true;
+								if (i >= hashArray.length) {
 									if (!isOptional) isValid = false;
+								} else {
+									if (paramArray[j] == 'id') {
+										if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+											isValid = false;
+										} else {
+											retObj.id = hashArray.slice(i);
+											hasIDProps = true;
+										}
+									} else retObj[paramArray[j]] = hashArray[i];
 								}
+							} else {
+								if (!isOptional) isValid = false;
 							}
 						}
-					} else {
-						isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);
-						if (!isValid) isDequalified = true;
 					}
+				} else {
+					isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);
+					if (!isValid) return null;
 				}
 			}
 			if(isValid){
-				if(!hasIDProps && hashArray.length > mapping.desc.length)
+				if (!hasIDProps && hashArray.length > mapping.desc.length) {
 					return null;
-				else 
+				} else {
+					for (var i = 0, l = paramArray.length; i < l; i++) {
+						if (mapping[paramArray[i]]) 
+							retObj[paramArray[i]] = mapping[paramArray[i]];
+					}
 					return retObj;
+				}
 			} else {
 				return null;
 			}
-	
 		}
 
 	
@@ -4862,7 +4867,8 @@ a5.Package('a5.cl.mvc')
 				rootController: null,
 				rootViewDef: null,
 				applicationViewPath:'views/',
-				rootWindow:null
+				rootWindow:null,
+				titleDelimiter:': '
 			});
 			cls.createMainConfigMethod('filters');
 			cls.createMainConfigMethod('mappings');

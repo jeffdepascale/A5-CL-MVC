@@ -130,50 +130,51 @@ a5.Package('a5.cl.mvc.core')
 		var runMatchAlgorithm = function(mapping, hashArray){
 			var retObj = {};
 			var isValid = false;
-			var isDequalified = false;
 			var hasIDProps = false;
 			for (var i = 0, l= mapping.desc.length; i <l; i++) {
-				if (!isDequalified) {
-					var isDirect = mapping.desc[i].indexOf(':') == 0;
-					if (isDirect) {
-						var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
-						var foundProp = false;
-						for (var j = 0, m = paramArray.length; j < m; j++) {
-							if (!foundProp) {
-								if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
-									foundProp = isValid = true;
-									if (i >= hashArray.length) {
-										if (!isOptional) isValid = false;
-									} else {
-										if (paramArray[j] == 'id') {
-											if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
-												isValid = false;
-											} else {
-												retObj.id = hashArray.slice(i);
-												hasIDProps = true;
-											}
-										} else retObj[paramArray[j]] = hashArray[i];
-									}
-								} else {
+				var isDirect = mapping.desc[i].indexOf(':') == 0;
+				if (isDirect) {
+					var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
+					var foundProp = false;
+					for (var j = 0, m = paramArray.length; j < m; j++) {
+						if (!foundProp) {
+							if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
+								foundProp = isValid = true;
+								if (i >= hashArray.length) {
 									if (!isOptional) isValid = false;
+								} else {
+									if (paramArray[j] == 'id') {
+										if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+											isValid = false;
+										} else {
+											retObj.id = hashArray.slice(i);
+											hasIDProps = true;
+										}
+									} else retObj[paramArray[j]] = hashArray[i];
 								}
+							} else {
+								if (!isOptional) isValid = false;
 							}
 						}
-					} else {
-						isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);
-						if (!isValid) isDequalified = true;
 					}
+				} else {
+					isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);
+					if (!isValid) return null;
 				}
 			}
 			if(isValid){
-				if(!hasIDProps && hashArray.length > mapping.desc.length)
+				if (!hasIDProps && hashArray.length > mapping.desc.length) {
 					return null;
-				else 
+				} else {
+					for (var i = 0, l = paramArray.length; i < l; i++) {
+						if (mapping[paramArray[i]]) 
+							retObj[paramArray[i]] = mapping[paramArray[i]];
+					}
 					return retObj;
+				}
 			} else {
 				return null;
 			}
-	
 		}
 
 	

@@ -188,6 +188,10 @@ a5.Package("a5.cl")
 			return val || this.instanceUID();
 		}
 		
+		proto.addCSSClass = function(name){
+			this._cl_viewElement.className += " " + name;
+		}
+		
 		/**
 		 * @name isChildOf
 		 * @param {a5.cl.CLViewContainer} target

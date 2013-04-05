@@ -25,7 +25,8 @@ a5.Package('a5.cl.mvc')
 				rootController: null,
 				rootViewDef: null,
 				applicationViewPath:'views/',
-				rootWindow:null
+				rootWindow:null,
+				titleDelimiter:': '
 			});
 			cls.createMainConfigMethod('filters');
 			cls.createMainConfigMethod('mappings');

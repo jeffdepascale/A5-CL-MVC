@@ -173,7 +173,7 @@ a5.Package('a5.cl.core.viewDef')
 				}
 			} else {
 				//Added method check due to CLView being a possible node owner
-				if (this._cl_view._cl_vdViewReady) 
+				if (this._cl_view._cl_vdViewReady && !this._cl_view._cl_vdViewIsReady)
 					this._cl_view._cl_vdViewReady();
 				if(typeof this._cl_buildCompleteCallback === 'function')
 					this._cl_buildCompleteCallback.call(this._cl_callbackScope, this._cl_view);
