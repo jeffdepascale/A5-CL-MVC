@@ -45,10 +45,10 @@ a5.Package('a5.cl.mvc.core')
 			if(_windowProps.scrollHeight === 0) _windowProps.scrollHeight = _windowProps.height;
 			if(_windowProps.scrollWidth === 0) _windowProps.scrollWidth = _windowProps.width;
 			if(cls.DOM().pluginConfig().clientEnvironmentOverrides){
-				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.config().mobileWidthThreshold){
+				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.MVC().pluginConfig().mobileWidthThreshold){
 					_forcedClientEnvironment = _clientEnvironment;
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])
-				} else if(_forcedClientEnvironment !== "MOBILE" && _windowProps.width < cls.config().mobileWidthThreshold){
+				} else if(_forcedClientEnvironment !== "MOBILE" && _windowProps.width < cls.MVC().pluginConfig().mobileWidthThreshold){
 					_forcedClientEnvironment = "MOBILE";
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])
 				}

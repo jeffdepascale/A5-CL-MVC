@@ -68,11 +68,7 @@ a5.Package('a5.cl.mvc.core')
 				if (callSig) {
 					filters.test(callSig, lastSig, function(valid){
 						if (valid) {
-							self.dispatchEvent('CONTROLLER_CHANGE', {
-								controller: callSig.controller,
-								action: callSig.action,
-								id: callSig.id
-							});
+							self.dispatchEvent('CONTROLLER_CHANGE', callSig);
 						}
 					})
 				} else {

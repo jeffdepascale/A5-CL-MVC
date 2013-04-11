@@ -111,13 +111,15 @@ a5.Package('a5.cl.mvc.core')
 				var matchData = runMatchAlgorithm(mappings[i], hashArray);
 				if (matchData) {
 					var sigObj = {
-						controller:mappings[i].controller,
-						action:mappings[i].action,
-						id:mappings[i].id
+						controller:mappings[i].controller || null,
+						action:mappings[i].action || null,
+						id:mappings[i].id || null
 					};
 					for (var prop in matchData) 
 						if (sigObj[prop] == undefined) 
-							sigObj[prop] = matchData[prop];			
+							sigObj[prop] = matchData[prop];		
+					if(sigObj.id == null)
+						sigObj.id = [];	
 					var passedConstraints = true;
 					if (mappings[i].constraints) passedConstraints = mappings[i].constraints(sigObj.controller, sigObj.action, sigObj.id);
 					if (passedConstraints) retSig = sigObj;
@@ -128,34 +130,39 @@ a5.Package('a5.cl.mvc.core')
 		}
 		
 		var runMatchAlgorithm = function(mapping, hashArray){
-			var retObj = {};
-			var isValid = false;
-			var hasIDProps = false;
+			var retObj = {},
+				isValid = false,
+				hasIDProps = false;
 			for (var i = 0, l= mapping.desc.length; i <l; i++) {
 				var isDirect = mapping.desc[i].indexOf(':') == 0;
 				if (isDirect) {
 					var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
-					var foundProp = false;
+					var foundProp = false,
+						mappingParam = mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1));
+					if(!isOptional && i >= hashArray.length)
+						return null;
 					for (var j = 0, m = paramArray.length; j < m; j++) {
-						if (!foundProp) {
-							if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
-								foundProp = isValid = true;
-								if (i >= hashArray.length) {
-									if (!isOptional) isValid = false;
-								} else {
-									if (paramArray[j] == 'id') {
-										if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
-											isValid = false;
-										} else {
-											retObj.id = hashArray.slice(i);
-											hasIDProps = true;
-										}
-									} else retObj[paramArray[j]] = hashArray[i];
-								}
-							} else {
+						if (mappingParam == paramArray[j]) {
+							foundProp = isValid = true;
+							if (i >= hashArray.length) {
 								if (!isOptional) isValid = false;
+							} else {
+								if (paramArray[j] == 'id') {
+									if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+										isValid = false;
+									} else {
+										retObj.id = hashArray.slice(i);
+										hasIDProps = true;
+									}
+								} else retObj[paramArray[j]] = hashArray[i];
 							}
+							break;
 						}
+					}
+					if(!foundProp){
+						isValid = true;
+						retObj[mappingParam] = hashArray[i];
+						retObj.customParams = true;
 					}
 				} else {
 					isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);

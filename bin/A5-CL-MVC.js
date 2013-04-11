@@ -386,11 +386,7 @@ a5.Package('a5.cl.mvc.core')
 				if (callSig) {
 					filters.test(callSig, lastSig, function(valid){
 						if (valid) {
-							self.dispatchEvent('CONTROLLER_CHANGE', {
-								controller: callSig.controller,
-								action: callSig.action,
-								id: callSig.id
-							});
+							self.dispatchEvent('CONTROLLER_CHANGE', callSig);
 						}
 					})
 				} else {
@@ -672,7 +668,7 @@ a5.Package('a5.cl.mvc.core')
  */
 a5.Package("a5.cl")
 	
-	.Import('a5.cl.CLEvent',
+	.Import('a5.cl.CLMVCEvent',
 			'a5.cl.mvc.CLViewEvent')
 	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
@@ -1615,7 +1611,7 @@ a5.Package("a5.cl")
 			//if this view has received a vdViewReady() call, and its parent is still being built, alert the parent
 			if (this._cl_vdViewIsReady && parentView._cl_buildingFromViewDef)
 				parentView._cl_vdViewAdded();
-			this.dispatchEvent(new im.CLEvent(im.CLEvent.ADDED_TO_PARENT));
+			this.dispatchEvent(im.CLMVCEvent.ADDED_TO_PARENT);
 		}
 		
 		proto._cl_removedFromParent = function(parentView){
@@ -1624,7 +1620,7 @@ a5.Package("a5.cl")
 			if(this._cl_viewElement)
 				this._cl_viewElement.style.display = 'none';
 			this._cl_initialRenderComplete = false;
-			this.dispatchEvent(new im.CLEvent(im.CLEvent.REMOVED_FROM_PARENT));
+			this.dispatchEvent(im.CLMVCEvent.REMOVED_FROM_PARENT);
 		}
 		
 		proto._cl_propGetSet = function(prop, value, type){
@@ -1833,10 +1829,10 @@ a5.Package('a5.cl.mvc.core')
 			if(_windowProps.scrollHeight === 0) _windowProps.scrollHeight = _windowProps.height;
 			if(_windowProps.scrollWidth === 0) _windowProps.scrollWidth = _windowProps.width;
 			if(cls.DOM().pluginConfig().clientEnvironmentOverrides){
-				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.config().mobileWidthThreshold){
+				if(_forcedClientEnvironment === "MOBILE" && _windowProps.width >= cls.MVC().pluginConfig().mobileWidthThreshold){
 					_forcedClientEnvironment = _clientEnvironment;
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])
-				} else if(_forcedClientEnvironment !== "MOBILE" && _windowProps.width < cls.config().mobileWidthThreshold){
+				} else if(_forcedClientEnvironment !== "MOBILE" && _windowProps.width < cls.MVC().pluginConfig().mobileWidthThreshold){
 					_forcedClientEnvironment = "MOBILE";
 					cls.cl().dispatchEvent(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, [_forcedClientEnvironment])
 				}
@@ -2767,13 +2763,15 @@ a5.Package('a5.cl.mvc.core')
 				var matchData = runMatchAlgorithm(mappings[i], hashArray);
 				if (matchData) {
 					var sigObj = {
-						controller:mappings[i].controller,
-						action:mappings[i].action,
-						id:mappings[i].id
+						controller:mappings[i].controller || null,
+						action:mappings[i].action || null,
+						id:mappings[i].id || null
 					};
 					for (var prop in matchData) 
 						if (sigObj[prop] == undefined) 
-							sigObj[prop] = matchData[prop];			
+							sigObj[prop] = matchData[prop];		
+					if(sigObj.id == null)
+						sigObj.id = [];	
 					var passedConstraints = true;
 					if (mappings[i].constraints) passedConstraints = mappings[i].constraints(sigObj.controller, sigObj.action, sigObj.id);
 					if (passedConstraints) retSig = sigObj;
@@ -2784,34 +2782,39 @@ a5.Package('a5.cl.mvc.core')
 		}
 		
 		var runMatchAlgorithm = function(mapping, hashArray){
-			var retObj = {};
-			var isValid = false;
-			var hasIDProps = false;
+			var retObj = {},
+				isValid = false,
+				hasIDProps = false;
 			for (var i = 0, l= mapping.desc.length; i <l; i++) {
 				var isDirect = mapping.desc[i].indexOf(':') == 0;
 				if (isDirect) {
 					var isOptional = mapping.desc[i].indexOf('?') == mapping.desc[i].length - 1;
-					var foundProp = false;
+					var foundProp = false,
+						mappingParam = mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1));
+					if(!isOptional && i >= hashArray.length)
+						return null;
 					for (var j = 0, m = paramArray.length; j < m; j++) {
-						if (!foundProp) {
-							if (mapping.desc[i].substr(1, mapping.desc[i].length - (isOptional ? 2 : 1)) == paramArray[j]) {
-								foundProp = isValid = true;
-								if (i >= hashArray.length) {
-									if (!isOptional) isValid = false;
-								} else {
-									if (paramArray[j] == 'id') {
-										if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
-											isValid = false;
-										} else {
-											retObj.id = hashArray.slice(i);
-											hasIDProps = true;
-										}
-									} else retObj[paramArray[j]] = hashArray[i];
-								}
-							} else {
+						if (mappingParam == paramArray[j]) {
+							foundProp = isValid = true;
+							if (i >= hashArray.length) {
 								if (!isOptional) isValid = false;
+							} else {
+								if (paramArray[j] == 'id') {
+									if (hashArray.length === 1 && hashArray[0] === "" && !isOptional) {
+										isValid = false;
+									} else {
+										retObj.id = hashArray.slice(i);
+										hasIDProps = true;
+									}
+								} else retObj[paramArray[j]] = hashArray[i];
 							}
+							break;
 						}
+					}
+					if(!foundProp){
+						isValid = true;
+						retObj[mappingParam] = hashArray[i];
+						retObj.customParams = true;
 					}
 				} else {
 					isValid = (i < hashArray.length && mapping.desc[i] == hashArray[i]);
@@ -4858,6 +4861,7 @@ a5.Package('a5.cl.mvc')
 		_garbageCollector,
 		_envManager,
 		_window,
+		redirectRewriter,
 		isFirstRender = true,
 		controller;
 		
@@ -4867,6 +4871,7 @@ a5.Package('a5.cl.mvc')
 				rootController: null,
 				rootViewDef: null,
 				applicationViewPath:'views/',
+				mobileWidthThreshold:768,
 				rootWindow:null,
 				titleDelimiter:': '
 			});
@@ -4916,6 +4921,8 @@ a5.Package('a5.cl.mvc')
 		 * @param {Boolean} [append=false]
 		 */
 		this.addMapping = function(mappingObj, append){	return this.MVC().mappings().addMapping(mappingObj, append); }
+		
+		this.setRedirectRewriter = function(rewriter){ redirectRewriter = rewriter; }
 		
 		this.controller = function(){ return controller; }
 		
@@ -4993,6 +5000,8 @@ a5.Package('a5.cl.mvc')
 		 */
 		this.redirect = function(params, info, forceRedirect){
 			if(_locationManager){
+				if(redirectRewriter)
+					params = redirectRewriter(params, info, forceRedirect);
 				return _locationManager.redirect(params, info, forceRedirect);
 			} else {
 				if(params === 500){
@@ -5044,14 +5053,17 @@ a5.Package('a5.cl.mvc')
 			else
 				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller, true);
 			if(!newController){
-				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
+				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.cl().applicationPackage(true) + '.controllers".');
 				return;
 			}
 			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE, data);
 			if(!newController._cl_mappable)
 				newController.setMappable();
 			if (typeof newController[action] === 'function'){
-				newController[action].apply(newController, (data.id || []));
+				if(data.customParams)
+					newController[action].call(newController, data);
+				else
+					newController[action].apply(newController, (data.id || []));
 			} else {
 				cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
 			}
@@ -5110,7 +5122,7 @@ a5.Package('a5.cl.mvc')
 				else	
 					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
-					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
+					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.cl().applicationPackage(true) + '.controllers".');
 					return;
 				}
 				controllerNS = controller.namespace();

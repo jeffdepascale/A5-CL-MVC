@@ -6,7 +6,7 @@
  */
 a5.Package("a5.cl")
 	
-	.Import('a5.cl.CLEvent',
+	.Import('a5.cl.CLMVCEvent',
 			'a5.cl.mvc.CLViewEvent')
 	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
@@ -949,7 +949,7 @@ a5.Package("a5.cl")
 			//if this view has received a vdViewReady() call, and its parent is still being built, alert the parent
 			if (this._cl_vdViewIsReady && parentView._cl_buildingFromViewDef)
 				parentView._cl_vdViewAdded();
-			this.dispatchEvent(new im.CLEvent(im.CLEvent.ADDED_TO_PARENT));
+			this.dispatchEvent(im.CLMVCEvent.ADDED_TO_PARENT);
 		}
 		
 		proto._cl_removedFromParent = function(parentView){
@@ -958,7 +958,7 @@ a5.Package("a5.cl")
 			if(this._cl_viewElement)
 				this._cl_viewElement.style.display = 'none';
 			this._cl_initialRenderComplete = false;
-			this.dispatchEvent(new im.CLEvent(im.CLEvent.REMOVED_FROM_PARENT));
+			this.dispatchEvent(im.CLMVCEvent.REMOVED_FROM_PARENT);
 		}
 		
 		proto._cl_propGetSet = function(prop, value, type){

@@ -16,6 +16,7 @@ a5.Package('a5.cl.mvc')
 		_garbageCollector,
 		_envManager,
 		_window,
+		redirectRewriter,
 		isFirstRender = true,
 		controller;
 		
@@ -25,6 +26,7 @@ a5.Package('a5.cl.mvc')
 				rootController: null,
 				rootViewDef: null,
 				applicationViewPath:'views/',
+				mobileWidthThreshold:768,
 				rootWindow:null,
 				titleDelimiter:': '
 			});
@@ -74,6 +76,8 @@ a5.Package('a5.cl.mvc')
 		 * @param {Boolean} [append=false]
 		 */
 		this.addMapping = function(mappingObj, append){	return this.MVC().mappings().addMapping(mappingObj, append); }
+		
+		this.setRedirectRewriter = function(rewriter){ redirectRewriter = rewriter; }
 		
 		this.controller = function(){ return controller; }
 		
@@ -151,6 +155,8 @@ a5.Package('a5.cl.mvc')
 		 */
 		this.redirect = function(params, info, forceRedirect){
 			if(_locationManager){
+				if(redirectRewriter)
+					params = redirectRewriter(params, info, forceRedirect);
 				return _locationManager.redirect(params, info, forceRedirect);
 			} else {
 				if(params === 500){
@@ -202,14 +208,17 @@ a5.Package('a5.cl.mvc')
 			else
 				newController = cls.cl()._core().instantiator().getClassInstance('Controller', data.controller, true);
 			if(!newController){
-				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.config().applicationPackage + '.controllers".');
+				cls.redirect(500, 'Error trying to instantiate controller ' + data.controller + ', controller does not exist in package "' + cls.cl().applicationPackage(true) + '.controllers".');
 				return;
 			}
 			cls.dispatchEvent(im.CLMVCEvent.PRIMARY_CONTROLLER_WILL_CHANGE, data);
 			if(!newController._cl_mappable)
 				newController.setMappable();
 			if (typeof newController[action] === 'function'){
-				newController[action].apply(newController, (data.id || []));
+				if(data.customParams)
+					newController[action].call(newController, data);
+				else
+					newController[action].apply(newController, (data.id || []));
 			} else {
 				cls.redirect(500, 'Error calling action "' + action + '" on controller "' + data.controller + '", action not defined.');
 			}
@@ -268,7 +277,7 @@ a5.Package('a5.cl.mvc')
 				else	
 					controller = cls.cl()._core().instantiator().createClassInstance(cfg.rootController, 'Controller');
 				if (!controller || !(controller instanceof a5.cl.CLController)) {
-					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.config().applicationPackage + '.controllers".');
+					cls.redirect(500, 'Invalid rootController specified, "' + cfg.rootController + '" controller does not exist in application package "' + cls.cl().applicationPackage(true) + '.controllers".');
 					return;
 				}
 				controllerNS = controller.namespace();
