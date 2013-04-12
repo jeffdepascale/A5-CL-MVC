@@ -131,6 +131,12 @@ a5.Package('a5.cl')
 			
 		}
 		
+		proto.renderInto = function(target, callback){
+			this.generateView(function(view){
+				this._cl_finalizeRender(target, view, callback);
+			}, this);
+		}
+		
 		/**
 		 * Renders a view into the render target for this controller.  The default render target is the root view.
 		 * Note that all other subviews in the render target will be removed.
@@ -146,7 +152,12 @@ a5.Package('a5.cl')
 			
 			this.generateView(function(rootView){
 				target = this._cl_renderTarget || rootView;
-				if(view instanceof a5.cl.CLWindow)
+				this._cl_finalizeRender(target, view, callback);
+			}, this);
+		}
+		
+		proto._cl_finalizeRender = function(target, view, callback){
+			if(view instanceof a5.cl.CLWindow)
 					target = a5.cl.mvc.core.AppViewContainer.instance();
 				if(view instanceof a5.cl.CLView){
 					if (!target.containsSubView(view)) {
@@ -170,7 +181,6 @@ a5.Package('a5.cl')
 				} else {
 					this._cl_renderComplete(callback);
 				}
-			}, this);
 		}
 		
 		proto._cl_renderComplete = function(callback){
