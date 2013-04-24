@@ -181,6 +181,7 @@ a5.Package('a5.cl.mvc.core')
 
 		var appContainer, 
 			pendingRedrawers = [],
+			activeRenderTarget = null,
 			appRedrawForced = false,
 			perfTester,
 			attached,
@@ -203,9 +204,9 @@ a5.Package('a5.cl.mvc.core')
 			pushRedrawTarget(target);
 		}
 		
-		this.attemptRedraw = function($target){
+		this.attemptRedraw = function($target, force){
 			var target = $target || self;
-			pushRedrawTarget(target);
+			pushRedrawTarget(target, force);
 		}
 		
 		this.triggerAppRedraw = function($force){
@@ -213,7 +214,7 @@ a5.Package('a5.cl.mvc.core')
 			attachForAnimCycle();
 		}
 		
-		var pushRedrawTarget = function(target){
+		var pushRedrawTarget = function(target, force){
 			var shouldPush = true,
 				i, l;
 			for (i = 0, l = pendingRedrawers.length; i < l; i++) { 
@@ -222,7 +223,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				}
 			}
-			if (shouldPush) {
+			if(shouldPush && (target !== activeRenderTarget || force)){
 				for(i = 0; i< pendingRedrawers.length; i++){	
 					if (pendingRedrawers[i].isChildOf(target)) {
 						pendingRedrawers.splice(i, 1);
@@ -231,8 +232,8 @@ a5.Package('a5.cl.mvc.core')
 				}
 				target.addOneTimeEventListener(a5.Event.DESTROYED, eRedrawerDestroyedHandler);
 				pendingRedrawers.push(target);
+				attachForAnimCycle();
 			}
-			attachForAnimCycle();
 		}
 		
 		var eRedrawerDestroyedHandler = function(e){
@@ -265,9 +266,10 @@ a5.Package('a5.cl.mvc.core')
 				pendingRedrawers = [];		
 			} else {
 				while(pendingRedrawers.length){
-					var targ = pendingRedrawers.shift();
-					targ._cl_redraw(false);
+					activeRenderTarget = pendingRedrawers.shift();
+					activeRenderTarget._cl_redraw(false);
 				}
+				activeRenderTarget = null;
 			}
 			if (perfTester)
 				perfTester.completeTest();
@@ -359,16 +361,16 @@ a5.Package('a5.cl.mvc.core')
 			}
 		}
 		
-		this.Override.redirect = function(params, info, forceRedirect){	
+		this.Override.redirect = function(params, info, forceRedirect, skipUpdate){	
 			var foundPath = true;
 			var type = typeof params;
 			if (type == 'string' && params.indexOf('://') != -1) {
 				params = { url: params };
 				type = 'object';
 			}
-			if(params instanceof Array) hash.setHash(params, false, forceRedirect);
-			if(params.hash != undefined) hash.setHash(params.hash, false, forceRedirect);
-			else if(type == 'string') hash.setHash(params, false, forceRedirect);
+			if(params instanceof Array) hash.setHash(params, skipUpdate, forceRedirect);
+			if(params.hash != undefined) hash.setHash(params.hash, skipUpdate, forceRedirect);
+			else if(type == 'string') hash.setHash(params, skipUpdate, forceRedirect);
 			else if(type == 'number') self._renderError(params, info);
 			else if(params.url) window.location = params.url;
 			else foundPath = false;
@@ -823,13 +825,7 @@ a5.Package("a5.cl")
 			if(CLView._cl_transformProp === undefined)
 				CLView._cl_transformProp = a5.cl.initializers.dom.Utils.getCSSProp('transform');
 			this._cl_viewElement = document.createElement(this._cl_viewElementType);
-			this._cl_viewElement.className = proto.className.call(this);
-			this._cl_viewElement.style.backgroundColor = 'transparent';
-			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
-			this._cl_viewElement.id =  proto.instanceUID.call(this);
-			this._cl_viewElement.style.zoom = 1;
-			this._cl_viewElement.style.position = 'absolute';
-			this._cl_viewElement.style.display = 'none';
+			this._cl_initializeElement();
 		}
 		
 		/**
@@ -851,7 +847,28 @@ a5.Package("a5.cl")
 		}
 		
 		proto.addCSSClass = function(name){
-			this._cl_viewElement.className += " " + name;
+			if(this._cl_viewElement.className.indexOf(name) !== 0 && this._cl_viewElement.className.indexOf(" " + name) === -1)
+				this._cl_viewElement.className += " " + name;
+		}
+		
+		proto.pullExistingElem = function(elem){
+			var newElem = typeof id == 'string' ? document.getElementById(elem) : elem;
+			if(newElem){
+				if(this._cl_parentView)
+					this._cl_parentView._cl_viewElement.replaceChild(newElem, this._cl_viewElement);
+				this._cl_viewElement = newElem;
+				this._cl_initializeElement();
+			}		
+		}
+		
+		proto._cl_initializeElement = function(){
+			this._cl_viewElement.className = proto.className.call(this);
+			this._cl_viewElement.style.backgroundColor = 'transparent';
+			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
+			this._cl_viewElement.id =  proto.instanceUID.call(this);
+			this._cl_viewElement.style.zoom = 1;
+			this._cl_viewElement.style.position = 'absolute';
+			this._cl_viewElement.style.display = 'none';
 		}
 		
 		/**
@@ -1454,10 +1471,10 @@ a5.Package("a5.cl")
 		/**
 		 * @name redraw
 		 */
-		proto.redraw = function(){
+		proto.redraw = function(force){
 			if (!this._cl_redrawPending && this.parentView()) {
 				this._cl_redrawPending = true;
-				this.cl().MVC().redrawEngine().attemptRedraw(this);
+				this.cl().MVC().redrawEngine().attemptRedraw(this, force);
 			}
 		}
 		
@@ -3850,8 +3867,9 @@ a5.Package('a5.cl')
 					}
 				}
 				//update the content width/height
-				contentWidthChanged = this._cl_width !== outerW;
-				contentHeightChanged = this._cl_height !== outerH;
+				//TODO: this was built wrong, we were not referring to 'content' and therefore the values were always true
+				contentWidthChanged = true; //this._cl_width.content !== outerW;
+				contentHeightChanged = true; //this._cl_height.content !== outerH;
 				this._cl_height.content = outerH;
 				this._cl_width.content = outerW;
 				
@@ -3913,12 +3931,6 @@ a5.Package('a5.cl')
 						this._cl_childViews[i]._cl_render();
 				}
 				
-				/*if ('ontouchstart' in window) {
-					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
-					if (prop) 
-						this._cl_pendingViewElementProps[prop] = 'touch';
-				}*/
-				
 				if (suppressRender !== true) 
 					this._cl_render();
 			}
@@ -3956,7 +3968,7 @@ a5.Package('a5.cl')
 				alignX = child._cl_alignX !== 'left'  && (changes.width || changes.x);
 				
 			if(autoWidth || autoHeight || relX || relY || scrollX || scrollY || alignX || alignY)
-				this.redraw();
+				this.redraw(true);
 		}
 		
 		proto.Override._cl_addedToTree = function(){
@@ -4276,19 +4288,24 @@ a5.Package('a5.cl')
 						} else {
 							url = ((this._cl_defaultViewDef.indexOf('://') == -1 && this._cl_defaultViewDef.charAt(0) !== "/" ) ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
+						this.cl().initializer().load(url, function(xml){
+							self._cl_buildViewDef(xml, callback, scope);
+						}, null, function(e){
+							//if an error occurred while loading the viewdef, throw a 404
+							if (isAssumed) {
+								self._cl_viewCreated(new a5.cl.CLViewContainer());
+								self._cl_viewReady();
+								callback.call(scope, self._cl_view);
+							} else {
+								self.redirect(404, url)
+							}
+						}) ;
+					} else {
+						this._cl_viewCreated(new a5.cl.CLViewContainer());
+						this._cl_viewReady();
+						if(typeof callback === 'function')
+							callback.call(scope, this._cl_view);
 					}					
-					this.cl().initializer().load(url, function(xml){
-						self._cl_buildViewDef(xml, callback, scope);
-					}, null, function(e){
-						//if an error occurred while loading the viewdef, throw a 404
-						if (isAssumed) {
-							self._cl_viewCreated(new a5.cl.CLViewContainer());
-							self._cl_viewReady();
-							callback.call(scope, self._cl_view);
-						} else {
-							self.redirect(404, url)
-						}
-					}) ;
 				}
 			}
 		}
@@ -4298,6 +4315,12 @@ a5.Package('a5.cl')
 		 */
 		proto.viewReady = function(){
 			
+		}
+		
+		proto.renderInto = function(target, callback){
+			this.generateView(function(view){
+				this._cl_finalizeRender(target, view, callback);
+			}, this);
 		}
 		
 		/**
@@ -4315,7 +4338,12 @@ a5.Package('a5.cl')
 			
 			this.generateView(function(rootView){
 				target = this._cl_renderTarget || rootView;
-				if(view instanceof a5.cl.CLWindow)
+				this._cl_finalizeRender(target, view, callback);
+			}, this);
+		}
+		
+		proto._cl_finalizeRender = function(target, view, callback){
+			if(view instanceof a5.cl.CLWindow)
 					target = a5.cl.mvc.core.AppViewContainer.instance();
 				if(view instanceof a5.cl.CLView){
 					if (!target.containsSubView(view)) {
@@ -4339,7 +4367,6 @@ a5.Package('a5.cl')
 				} else {
 					this._cl_renderComplete(callback);
 				}
-			}, this);
 		}
 		
 		proto._cl_renderComplete = function(callback){
@@ -4727,8 +4754,7 @@ a5.Package('a5.cl.plugins.hashManager')
 			if (forceRedirect === true || (hash !== lastHash && hash !== getHash())) {
 				cls.dispatchEvent(im.CLHashEvent.HASH_WILL_CHANGE, {hashArray:hash});
 				if (hash == "") {
-					if (skipUpdate === true) lastHash = hashDelimiter;
-					setLocHash(hashDelimiter);
+					setLocHash(hashDelimiter, false, skipUpdate);
 				} else {
 					if (typeof hash == 'object') {
 						for (var i = 0, l=hash.length; i < l; i++) {
@@ -4747,7 +4773,7 @@ a5.Package('a5.cl.plugins.hashManager')
 					if (concatHash.substr(0, 1) == '/') concatHash = concatHash.substr(1);
 					if (concatHash.substr(0, hashDelimiter.length) != hashDelimiter) concatHash = hashDelimiter + '/' + concatHash;
 					if (skipUpdate === true) lastHash = concatHash;
-					setLocHash(concatHash);
+					setLocHash(concatHash, false, skipUpdate);
 				}
 				if (forceRedirect) {
 					forceOnNext = true;
@@ -4805,7 +4831,15 @@ a5.Package('a5.cl.plugins.hashManager')
 			else if (history.navigationMode) history.navigationMode = 'compatible';
 		},	
 		
-		setLocHash = function (newHash, $forceIframe) {
+		setLocHash = function (newHash, $forceIframe, skipUpdate) {
+			if(skipUpdate){
+				if (history.replaceState) {
+					history.replaceState({}, document.title, newHash);
+					return;
+				} else {
+					lastHash = hashDelimiter;
+				}
+			}
 			var forceIframe = $forceIframe || false;
 			if (!forceIframe) location.hash = newHash;
 			if (iframe) {
@@ -4962,7 +4996,7 @@ a5.Package('a5.cl.mvc')
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
-			a5.cl.initializers.dom.Utils.purgeBody();
+			document.getElementsByTagName('body')[0].style.margin = '0px';
 			cls.application().view().draw();
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
@@ -4998,11 +5032,11 @@ a5.Package('a5.cl.mvc')
 		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
 		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
 		 */
-		this.redirect = function(params, info, forceRedirect){
+		this.redirect = function(params, info, forceRedirect, skipUpdate){
 			if(_locationManager){
 				if(redirectRewriter)
-					params = redirectRewriter(params, info, forceRedirect);
-				return _locationManager.redirect(params, info, forceRedirect);
+					params = redirectRewriter(params, info, forceRedirect, skipUpdate);
+				return _locationManager.redirect(params, info, forceRedirect, skipUpdate);
 			} else {
 				if(params === 500){
 					var isError = info instanceof a5.Error;

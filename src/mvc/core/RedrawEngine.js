@@ -7,6 +7,7 @@ a5.Package('a5.cl.mvc.core')
 
 		var appContainer, 
 			pendingRedrawers = [],
+			activeRenderTarget = null,
 			appRedrawForced = false,
 			perfTester,
 			attached,
@@ -29,9 +30,9 @@ a5.Package('a5.cl.mvc.core')
 			pushRedrawTarget(target);
 		}
 		
-		this.attemptRedraw = function($target){
+		this.attemptRedraw = function($target, force){
 			var target = $target || self;
-			pushRedrawTarget(target);
+			pushRedrawTarget(target, force);
 		}
 		
 		this.triggerAppRedraw = function($force){
@@ -39,7 +40,7 @@ a5.Package('a5.cl.mvc.core')
 			attachForAnimCycle();
 		}
 		
-		var pushRedrawTarget = function(target){
+		var pushRedrawTarget = function(target, force){
 			var shouldPush = true,
 				i, l;
 			for (i = 0, l = pendingRedrawers.length; i < l; i++) { 
@@ -48,7 +49,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				}
 			}
-			if (shouldPush) {
+			if(shouldPush && (target !== activeRenderTarget || force)){
 				for(i = 0; i< pendingRedrawers.length; i++){	
 					if (pendingRedrawers[i].isChildOf(target)) {
 						pendingRedrawers.splice(i, 1);
@@ -57,8 +58,8 @@ a5.Package('a5.cl.mvc.core')
 				}
 				target.addOneTimeEventListener(a5.Event.DESTROYED, eRedrawerDestroyedHandler);
 				pendingRedrawers.push(target);
+				attachForAnimCycle();
 			}
-			attachForAnimCycle();
 		}
 		
 		var eRedrawerDestroyedHandler = function(e){
@@ -91,9 +92,10 @@ a5.Package('a5.cl.mvc.core')
 				pendingRedrawers = [];		
 			} else {
 				while(pendingRedrawers.length){
-					var targ = pendingRedrawers.shift();
-					targ._cl_redraw(false);
+					activeRenderTarget = pendingRedrawers.shift();
+					activeRenderTarget._cl_redraw(false);
 				}
+				activeRenderTarget = null;
 			}
 			if (perfTester)
 				perfTester.completeTest();

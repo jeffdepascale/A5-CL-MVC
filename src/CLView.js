@@ -93,11 +93,10 @@ a5.Package("a5.cl")
 		}
 		
 		CLView._cl_viewCanRedraw = function(view){
-			var isValid = true;
-			if(!view._cl_viewElement) isValid = false;
-			if(!view._cl_parentView) isValid = false;
-			if(!view.visible() && view._cl_initialRenderComplete) isValid = false;
-			if(view.suspendRedraws()) isValid = false;
+			var isValid = (view._cl_viewElement && 
+					view._cl_parentView &&
+					(view.visible() && !view._cl_initialRenderComplete) &&
+					!view.suspendRedraws());
 			if(!isValid)
 				view._cl_redrawPending = false;
 			return isValid;
@@ -161,13 +160,7 @@ a5.Package("a5.cl")
 			if(CLView._cl_transformProp === undefined)
 				CLView._cl_transformProp = a5.cl.initializers.dom.Utils.getCSSProp('transform');
 			this._cl_viewElement = document.createElement(this._cl_viewElementType);
-			this._cl_viewElement.className = proto.className.call(this);
-			this._cl_viewElement.style.backgroundColor = 'transparent';
-			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
-			this._cl_viewElement.id =  proto.instanceUID.call(this);
-			this._cl_viewElement.style.zoom = 1;
-			this._cl_viewElement.style.position = 'absolute';
-			this._cl_viewElement.style.display = 'none';
+			this._cl_initializeElement();
 		}
 		
 		/**
@@ -189,7 +182,29 @@ a5.Package("a5.cl")
 		}
 		
 		proto.addCSSClass = function(name){
-			this._cl_viewElement.className += " " + name;
+			if(this._cl_viewElement.className.indexOf(name) !== 0 && this._cl_viewElement.className.indexOf(" " + name) === -1)
+				this._cl_viewElement.className += " " + name;
+		}
+		
+		proto.pullExistingElem = function(elem){
+			var newElem = typeof id == 'string' ? document.getElementById(elem) : elem;
+			if(newElem){
+				if(this._cl_parentView)
+					this._cl_parentView._cl_viewElement.replaceChild(newElem, this._cl_viewElement);
+				this._cl_viewElement = newElem;
+				this._cl_initializeElement();
+			}		
+		}
+		
+		proto._cl_initializeElement = function(){
+			this._cl_viewElement.className = proto.className.call(this);
+			this._cl_viewElement.style.backgroundColor = 'transparent';
+			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
+			this._cl_viewElement.id =  proto.instanceUID.call(this);
+			this._cl_viewElement.style.zoom = 1;
+			this._cl_viewElement.style.position = 'absolute';
+			this._cl_viewElement.style.display = 'none';
+			this._cl_viewElement.a5Ref = this;
 		}
 		
 		/**
@@ -792,10 +807,10 @@ a5.Package("a5.cl")
 		/**
 		 * @name redraw
 		 */
-		proto.redraw = function(){
+		proto.redraw = function(force){
 			if (!this._cl_redrawPending && this.parentView()) {
 				this._cl_redrawPending = true;
-				this.cl().MVC().redrawEngine().attemptRedraw(this);
+				this.cl().MVC().redrawEngine().attemptRedraw(this, force);
 			}
 		}
 		

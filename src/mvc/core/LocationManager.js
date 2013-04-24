@@ -41,16 +41,16 @@ a5.Package('a5.cl.mvc.core')
 			}
 		}
 		
-		this.Override.redirect = function(params, info, forceRedirect){	
+		this.Override.redirect = function(params, info, forceRedirect, skipUpdate){	
 			var foundPath = true;
 			var type = typeof params;
 			if (type == 'string' && params.indexOf('://') != -1) {
 				params = { url: params };
 				type = 'object';
 			}
-			if(params instanceof Array) hash.setHash(params, false, forceRedirect);
-			if(params.hash != undefined) hash.setHash(params.hash, false, forceRedirect);
-			else if(type == 'string') hash.setHash(params, false, forceRedirect);
+			if(params instanceof Array) hash.setHash(params, skipUpdate, forceRedirect);
+			if(params.hash != undefined) hash.setHash(params.hash, skipUpdate, forceRedirect);
+			else if(type == 'string') hash.setHash(params, skipUpdate, forceRedirect);
 			else if(type == 'number') self._renderError(params, info);
 			else if(params.url) window.location = params.url;
 			else foundPath = false;

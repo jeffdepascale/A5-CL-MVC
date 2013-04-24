@@ -276,7 +276,7 @@ a5.Package('a5.cl')
 				}
 			}
 			if(changed)
-				this.redraw();
+				this.redraw(true);
 		}
 		
 		proto._cl_addChildView = function(view, $index, callback){
@@ -536,8 +536,9 @@ a5.Package('a5.cl')
 					}
 				}
 				//update the content width/height
-				contentWidthChanged = this._cl_width !== outerW;
-				contentHeightChanged = this._cl_height !== outerH;
+				//TODO: this was built wrong, we were not referring to 'content' and therefore the values were always true
+				contentWidthChanged = true; //this._cl_width.content !== outerW;
+				contentHeightChanged = true; //this._cl_height.content !== outerH;
 				this._cl_height.content = outerH;
 				this._cl_width.content = outerW;
 				
@@ -599,12 +600,6 @@ a5.Package('a5.cl')
 						this._cl_childViews[i]._cl_render();
 				}
 				
-				/*if ('ontouchstart' in window) {
-					var prop = a5.core.Utils.getCSSProp('overflowScrolling');
-					if (prop) 
-						this._cl_pendingViewElementProps[prop] = 'touch';
-				}*/
-				
 				if (suppressRender !== true) 
 					this._cl_render();
 			}
@@ -642,7 +637,7 @@ a5.Package('a5.cl')
 				alignX = child._cl_alignX !== 'left'  && (changes.width || changes.x);
 				
 			if(autoWidth || autoHeight || relX || relY || scrollX || scrollY || alignX || alignY)
-				this.redraw();
+				this.redraw(true);
 		}
 		
 		proto.Override._cl_addedToTree = function(){

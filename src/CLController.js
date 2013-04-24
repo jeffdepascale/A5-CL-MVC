@@ -107,19 +107,24 @@ a5.Package('a5.cl')
 						} else {
 							url = ((this._cl_defaultViewDef.indexOf('://') == -1 && this._cl_defaultViewDef.charAt(0) !== "/" ) ? this.MVC().pluginConfig().applicationViewPath : '') + this._cl_defaultViewDef;
 						}
+						this.cl().initializer().load(url, function(xml){
+							self._cl_buildViewDef(xml, callback, scope);
+						}, null, function(e){
+							//if an error occurred while loading the viewdef, throw a 404
+							if (isAssumed) {
+								self._cl_viewCreated(new a5.cl.CLViewContainer());
+								self._cl_viewReady();
+								callback.call(scope, self._cl_view);
+							} else {
+								self.redirect(404, url)
+							}
+						}) ;
+					} else {
+						this._cl_viewCreated(new a5.cl.CLViewContainer());
+						this._cl_viewReady();
+						if(typeof callback === 'function')
+							callback.call(scope, this._cl_view);
 					}					
-					this.cl().initializer().load(url, function(xml){
-						self._cl_buildViewDef(xml, callback, scope);
-					}, null, function(e){
-						//if an error occurred while loading the viewdef, throw a 404
-						if (isAssumed) {
-							self._cl_viewCreated(new a5.cl.CLViewContainer());
-							self._cl_viewReady();
-							callback.call(scope, self._cl_view);
-						} else {
-							self.redirect(404, url)
-						}
-					}) ;
 				}
 			}
 		}

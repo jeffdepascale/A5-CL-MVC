@@ -117,7 +117,7 @@ a5.Package('a5.cl.mvc')
 			cls.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, dependenciesLoaded);
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, appWillLaunch);
 			cls.cl().addEventListener(im.CLEvent.ERROR_THROWN, eErrorThrownHandler);
-			a5.cl.initializers.dom.Utils.purgeBody();
+			document.getElementsByTagName('body')[0].style.margin = '0px';
 			cls.application().view().draw();
 			cls.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eApplicationPreparedHandler);
 		}
@@ -153,11 +153,11 @@ a5.Package('a5.cl.mvc')
 		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
 		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
 		 */
-		this.redirect = function(params, info, forceRedirect){
+		this.redirect = function(params, info, forceRedirect, skipUpdate){
 			if(_locationManager){
 				if(redirectRewriter)
-					params = redirectRewriter(params, info, forceRedirect);
-				return _locationManager.redirect(params, info, forceRedirect);
+					params = redirectRewriter(params, info, forceRedirect, skipUpdate);
+				return _locationManager.redirect(params, info, forceRedirect, skipUpdate);
 			} else {
 				if(params === 500){
 					var isError = info instanceof a5.Error;
