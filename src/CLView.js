@@ -93,10 +93,11 @@ a5.Package("a5.cl")
 		}
 		
 		CLView._cl_viewCanRedraw = function(view){
-			var isValid = (view._cl_viewElement && 
-					view._cl_parentView &&
-					(view.visible() && !view._cl_initialRenderComplete) &&
-					!view.suspendRedraws());
+			var isValid = true;
+			if(!view._cl_viewElement) isValid = false;
+			if(!view._cl_parentView) isValid = false;
+			if(!view.visible() && view._cl_initialRenderComplete) isValid = false;
+			if(view.suspendRedraws()) isValid = false;
 			if(!isValid)
 				view._cl_redrawPending = false;
 			return isValid;

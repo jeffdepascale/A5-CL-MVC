@@ -520,7 +520,7 @@ a5.Package('a5.cl')
 									view._cl_y.state = view.y();
 							}
 						}
-						view._cl_redraw(force || forceChildren, true);
+						view._cl_redraw(true, true);
 						
 						if (CLViewContainer.viewAffectsAutoWidth(view)) {
 							maxW = view.width() + view.x(true);

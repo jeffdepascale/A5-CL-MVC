@@ -5,9 +5,8 @@ a5.Package('a5.cl.mvc.core')
 	.Extends('a5.cl.CLMVCBase')
 	.Class('RedrawEngine', 'singleton final', function(self, im){
 
-		var appContainer, 
+				var appContainer, 
 			pendingRedrawers = [],
-			activeRenderTarget = null,
 			appRedrawForced = false,
 			perfTester,
 			attached,
@@ -49,7 +48,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				}
 			}
-			if(shouldPush && (target !== activeRenderTarget || force)){
+			if(shouldPush){
 				for(i = 0; i< pendingRedrawers.length; i++){	
 					if (pendingRedrawers[i].isChildOf(target)) {
 						pendingRedrawers.splice(i, 1);
@@ -92,10 +91,8 @@ a5.Package('a5.cl.mvc.core')
 				pendingRedrawers = [];		
 			} else {
 				while(pendingRedrawers.length){
-					activeRenderTarget = pendingRedrawers.shift();
-					activeRenderTarget._cl_redraw(false);
+					pendingRedrawers.shift()._cl_redraw(false);
 				}
-				activeRenderTarget = null;
 			}
 			if (perfTester)
 				perfTester.completeTest();
