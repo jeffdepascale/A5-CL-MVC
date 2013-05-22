@@ -181,7 +181,6 @@ a5.Package('a5.cl.mvc.core')
 
 		var appContainer, 
 			pendingRedrawers = [],
-			activeRenderTarget = null,
 			appRedrawForced = false,
 			perfTester,
 			attached,
@@ -223,7 +222,7 @@ a5.Package('a5.cl.mvc.core')
 					break;
 				}
 			}
-			if(shouldPush && (target !== activeRenderTarget || force)){
+			if(shouldPush){
 				for(i = 0; i< pendingRedrawers.length; i++){	
 					if (pendingRedrawers[i].isChildOf(target)) {
 						pendingRedrawers.splice(i, 1);
@@ -266,10 +265,8 @@ a5.Package('a5.cl.mvc.core')
 				pendingRedrawers = [];		
 			} else {
 				while(pendingRedrawers.length){
-					activeRenderTarget = pendingRedrawers.shift();
-					activeRenderTarget._cl_redraw(false);
+					pendingRedrawers.shift()._cl_redraw(false);
 				}
-				activeRenderTarget = null;
 			}
 			if (perfTester)
 				perfTester.completeTest();
@@ -869,6 +866,7 @@ a5.Package("a5.cl")
 			this._cl_viewElement.style.zoom = 1;
 			this._cl_viewElement.style.position = 'absolute';
 			this._cl_viewElement.style.display = 'none';
+			this._cl_viewElement.a5Ref = this;
 		}
 		
 		/**
@@ -1302,6 +1300,8 @@ a5.Package("a5.cl")
 			this._cl_viewIsReady = true;
 			this.dispatchEvent(new im.CLViewEvent(im.CLViewEvent.VIEW_READY));
 		}
+		
+		proto.redrawComplete = function(){}
 		
 		proto.viewIsReady = function(){
 			return this._cl_viewIsReady;
@@ -1802,7 +1802,8 @@ a5.Package("a5.cl")
 
 a5.Package('a5.cl.mvc.core')
 	
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.initializers.dom.Utils')
 	.Extends('a5.cl.CLMVCBase')
 	.Class('EnvManager', function(cls, im){
 		
@@ -1818,6 +1819,7 @@ a5.Package('a5.cl.mvc.core')
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
 			_forcedClientEnvironment = _clientEnvironment = cls.DOM().clientEnvironment();
 			updateResize();
+			im.Utils.addEventListener(window, "focus", function(e){ updateResize(); });
 		}
 		
 		this.scrollBarWidth = function(){ return _scrollBarWidth; }
@@ -3281,7 +3283,7 @@ a5.Package('a5.cl')
 			var self = this,
 				asyncCall = null,
 				checkUpdated = function(){
-					if (node.innerHTML !== "") {
+					if (node.innerHTML !== "" && document.getElementById(this.instanceUID())) {
 						//if auto width/height, set back to auto
 						if(autoWidth) node.style.width = 'auto';
 						if(autoHeight) node.style.height = 'auto';
@@ -3303,7 +3305,7 @@ a5.Package('a5.cl')
 			this._cl_scrollWidth = this._cl_scrollHeight = null;
 			
 			if (value != '') {
-				asyncCall = this.async(checkUpdated, null, .2);
+				asyncCall = this.cycle(checkUpdated, null, .2, 1000);
 			} else {
 				self._cl_dispatchUpdated();
 				this.htmlUpdated(false);
@@ -3607,7 +3609,7 @@ a5.Package('a5.cl')
 				}
 			}
 			if(changed)
-				this.redraw();
+				this.redraw(true);
 		}
 		
 		proto._cl_addChildView = function(view, $index, callback){
@@ -3620,14 +3622,14 @@ a5.Package('a5.cl')
 					view.parentView().removeSubView(view, false);
 				var index = (typeof $index == 'number') ? $index:null;
 				if(index > this._cl_childViews.length-1) index = null;
-				this.willAddView();
+				this.willAddView(view);
 				view.draw(this);
-				this.viewAdded();
+				this.viewAdded(view);
+				view._cl_setParent(this);
 				view._cl_addedToParent(this);
 				if(callback) callback(view);
 				if(index !== null) this._cl_childViews.splice(index, 0, view)
 				else this._cl_childViews.push(view);
-				view._cl_setParent(this);
 				this._cl_orderChildren();
 				if(this._cl_passDataToChildren && this._cl_passedData)
 					view.renderFromData(this._cl_passedData)
@@ -3802,6 +3804,12 @@ a5.Package('a5.cl')
 				return proto.superclass().height.apply(this, arguments);
 		}
 		
+		proto.Override.redrawComplete = function(params){
+			proto.superclass().redrawComplete.apply(this, arguments);
+			for(var i = 0, l=this._cl_childViews.length; i<l; i++)
+				this._cl_childViews[i].redrawComplete();
+		}
+		
 		proto.Override.suspendRedraws = function(value, inherited){
 			if(typeof value === 'boolean') {
 				for(var x = 0, y = this.subViewCount(); x < y; x++){
@@ -3851,7 +3859,7 @@ a5.Package('a5.cl')
 									view._cl_y.state = view.y();
 							}
 						}
-						view._cl_redraw(force || forceChildren, true);
+						view._cl_redraw(true, true);
 						
 						if (CLViewContainer.viewAffectsAutoWidth(view)) {
 							maxW = view.width() + view.x(true);
@@ -4243,8 +4251,8 @@ a5.Package('a5.cl')
 		 * @name index
 		 * @param {Object} [data]
 		 */
-		proto.index = function(data){
-			this.render();
+		proto.index = function(callback){
+			this.render(callback);
 		}
 		
 		/**

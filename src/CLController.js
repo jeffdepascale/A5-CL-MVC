@@ -62,8 +62,8 @@ a5.Package('a5.cl')
 		 * @name index
 		 * @param {Object} [data]
 		 */
-		proto.index = function(data){
-			this.render();
+		proto.index = function(callback){
+			this.render(callback);
 		}
 		
 		/**

@@ -350,7 +350,7 @@ a5.Package('a5.cl')
 			var self = this,
 				asyncCall = null,
 				checkUpdated = function(){
-					if (node.innerHTML !== "") {
+					if (node.innerHTML !== "" && document.getElementById(this.instanceUID())) {
 						//if auto width/height, set back to auto
 						if(autoWidth) node.style.width = 'auto';
 						if(autoHeight) node.style.height = 'auto';
@@ -372,7 +372,7 @@ a5.Package('a5.cl')
 			this._cl_scrollWidth = this._cl_scrollHeight = null;
 			
 			if (value != '') {
-				asyncCall = this.async(checkUpdated, null, .2);
+				asyncCall = this.cycle(checkUpdated, null, .2, 1000);
 			} else {
 				self._cl_dispatchUpdated();
 				this.htmlUpdated(false);

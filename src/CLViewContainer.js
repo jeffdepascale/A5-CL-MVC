@@ -289,14 +289,14 @@ a5.Package('a5.cl')
 					view.parentView().removeSubView(view, false);
 				var index = (typeof $index == 'number') ? $index:null;
 				if(index > this._cl_childViews.length-1) index = null;
-				this.willAddView();
+				this.willAddView(view);
 				view.draw(this);
-				this.viewAdded();
+				this.viewAdded(view);
+				view._cl_setParent(this);
 				view._cl_addedToParent(this);
 				if(callback) callback(view);
 				if(index !== null) this._cl_childViews.splice(index, 0, view)
 				else this._cl_childViews.push(view);
-				view._cl_setParent(this);
 				this._cl_orderChildren();
 				if(this._cl_passDataToChildren && this._cl_passedData)
 					view.renderFromData(this._cl_passedData)
@@ -469,6 +469,12 @@ a5.Package('a5.cl')
 				return Math.max(this._cl_height.content + this._cl_calculatedClientOffset.top + this._cl_calculatedOffset.top, this._cl_height.offset);
 			else
 				return proto.superclass().height.apply(this, arguments);
+		}
+		
+		proto.Override.redrawComplete = function(params){
+			proto.superclass().redrawComplete.apply(this, arguments);
+			for(var i = 0, l=this._cl_childViews.length; i<l; i++)
+				this._cl_childViews[i].redrawComplete();
 		}
 		
 		proto.Override.suspendRedraws = function(value, inherited){

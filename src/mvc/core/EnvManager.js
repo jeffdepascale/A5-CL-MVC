@@ -1,7 +1,8 @@
 
 a5.Package('a5.cl.mvc.core')
 	
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent',
+			'a5.cl.initializers.dom.Utils')
 	.Extends('a5.cl.CLMVCBase')
 	.Class('EnvManager', function(cls, im){
 		
@@ -17,6 +18,7 @@ a5.Package('a5.cl.mvc.core')
 			cls.cl().addEventListener(im.CLEvent.WINDOW_RESIZED, updateResize);
 			_forcedClientEnvironment = _clientEnvironment = cls.DOM().clientEnvironment();
 			updateResize();
+			im.Utils.addEventListener(window, "focus", function(e){ updateResize(); });
 		}
 		
 		this.scrollBarWidth = function(){ return _scrollBarWidth; }

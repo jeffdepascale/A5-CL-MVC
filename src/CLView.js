@@ -640,6 +640,8 @@ a5.Package("a5.cl")
 			this.dispatchEvent(new im.CLViewEvent(im.CLViewEvent.VIEW_READY));
 		}
 		
+		proto.redrawComplete = function(){}
+		
 		proto.viewIsReady = function(){
 			return this._cl_viewIsReady;
 		}

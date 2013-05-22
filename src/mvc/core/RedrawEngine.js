@@ -5,7 +5,7 @@ a5.Package('a5.cl.mvc.core')
 	.Extends('a5.cl.CLMVCBase')
 	.Class('RedrawEngine', 'singleton final', function(self, im){
 
-				var appContainer, 
+		var appContainer, 
 			pendingRedrawers = [],
 			appRedrawForced = false,
 			perfTester,
@@ -82,8 +82,6 @@ a5.Package('a5.cl.mvc.core')
 		var eRedrawCycle = function(){
 			if(!animFrameHook)
 				self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, eRedrawCycle);
-			if(perfTester)
-				perfTester.startTest();
 			var force = appRedrawForced;
 			appRedrawForced = false;
 			if (force) {
@@ -94,8 +92,6 @@ a5.Package('a5.cl.mvc.core')
 					pendingRedrawers.shift()._cl_redraw(false);
 				}
 			}
-			if (perfTester)
-				perfTester.completeTest();
 			attached = false;
 		}
 
