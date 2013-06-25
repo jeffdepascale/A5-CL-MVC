@@ -256,8 +256,6 @@ a5.Package('a5.cl.mvc.core')
 		var eRedrawCycle = function(){
 			if(!animFrameHook)
 				self.cl().removeEventListener(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK, eRedrawCycle);
-			if(perfTester)
-				perfTester.startTest();
 			var force = appRedrawForced;
 			appRedrawForced = false;
 			if (force) {
@@ -268,8 +266,6 @@ a5.Package('a5.cl.mvc.core')
 					pendingRedrawers.shift()._cl_redraw(false);
 				}
 			}
-			if (perfTester)
-				perfTester.completeTest();
 			attached = false;
 		}
 
@@ -3438,8 +3434,10 @@ a5.Package('a5.cl')
 			if (value !== undefined) {
 				this._cl_relX = value;
 				if (value === false) {
-					for (var i = 0, l = this._cl_childViews.length; i < l; i++)
+					for (var i = 0, l = this._cl_childViews.length; i < l; i++) 
 						this._cl_childViews[i]._cl_x.state = false;
+				} else if (this.relY()) {
+					this.relY(false);
 				}
 				this.redraw();
 				return this;
@@ -3455,8 +3453,10 @@ a5.Package('a5.cl')
 			if (value !== undefined) {
 				this._cl_relY = value;
 				if (value === false) {
-					for (var i = 0, l = this._cl_childViews.length; i < l; i++)
+					for (var i = 0, l = this._cl_childViews.length; i < l; i++) 
 						this._cl_childViews[i]._cl_y.state = false;
+				} else if (this.relX()) {
+					this.relX(false);
 				}
 				this.redraw();
 				return this;
@@ -4217,6 +4217,7 @@ a5.Package('a5.cl')
 			this._cl_childControllers = [];
 			this._cl_id = null;
 			this._cl_viewIsInTree = false;
+			this._cl_viewAddedToTreePending = false;
 		});
 		
 		/**#@+
@@ -4403,36 +4404,6 @@ a5.Package('a5.cl')
 			proto.mixins().bind.call(this, source, receiver, params, mapping, scope, persist);
 		}
 		
-		proto._cl_viewAddedToTree = function(){
-			if(!this.bindingsConnected())
-				this.setBindingEnabled(true);
-			this.cl().addEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated, false, this);
-			this.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged, false, this);
-			this._cl_viewIsInTree = true;
-			this.viewAddedToTree();
-		}
-		
-		proto.viewAddedToTree = function(){
-			
-		}
-		
-		proto._cl_viewRemovedFromTree = function(){
-			if (this._cl_bindingsConnected)
-				this.setBindingEnabled(false);
-			this.cl().removeEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated);
-			this.cl().removeEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged);
-			this._cl_viewIsInTree = false;
-			this.viewRemovedFromTree();
-		}
-		
-		proto.viewRemovedFromTree = function(){
-			
-		}
-		
-		proto.viewIsInTree = function(){
-			return this._cl_viewIsInTree;
-		}
-		
 		/**
 		 * Get or set the default view definition.  Can be a path to XML, or a string of XML.
 		 * @name defaultViewDefinition
@@ -4520,7 +4491,44 @@ a5.Package('a5.cl')
 			if (this._cl_viewReadyPending) {
 				this._cl_viewReadyPending = false;
 				this.viewReady();
+				if(this._cl_viewAddedToTreePending){
+					this._cl_viewAddedToTreePending = false;
+					this._cl_viewAddedToTree();
+				}
 			}
+		}
+		proto._cl_viewAddedToTree = function(){
+			if (this._cl_viewReadyPending) {
+				this._cl_viewAddedToTreePending = true;
+			} else {
+				if (!this.bindingsConnected()) 
+					this.setBindingEnabled(true);
+				this.cl().addEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated, false, this);
+				this.cl().addEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged, false, this);
+				this._cl_viewIsInTree = true;
+				this.viewAddedToTree();
+			}
+		}
+		
+		proto.viewAddedToTree = function(){
+			
+		}
+		
+		proto._cl_viewRemovedFromTree = function(){
+			if (this._cl_bindingsConnected)
+				this.setBindingEnabled(false);
+			this.cl().removeEventListener(im.CLEvent.CLIENT_ENVIRONMENT_UPDATED, this.clientEnvironmentUpdated);
+			this.cl().removeEventListener(im.CLEvent.ORIENTATION_CHANGED, this.orientationChanged);
+			this._cl_viewIsInTree = false;
+			this.viewRemovedFromTree();
+		}
+		
+		proto.viewRemovedFromTree = function(){
+			
+		}
+		
+		proto.viewIsInTree = function(){
+			return this._cl_viewIsInTree;
 		}
 		
 		proto.dealloc = function(){

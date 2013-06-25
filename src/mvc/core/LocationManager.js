@@ -55,7 +55,10 @@ a5.Package('a5.cl.mvc.core')
 			else if(params.url) window.location = params.url;
 			else foundPath = false;
 			if (!foundPath) {
-				if (params.forceHash != undefined) hash.setHash(params.forceHash, true);
+				if (params.forceHash != undefined) {
+					params.hash = params.forceHash;
+					hash.setHash(params.forceHash, true);
+				}
 				if (params.controller != undefined) 
 					this.processMapping(params);
 			}

@@ -105,8 +105,10 @@ a5.Package('a5.cl')
 			if (value !== undefined) {
 				this._cl_relX = value;
 				if (value === false) {
-					for (var i = 0, l = this._cl_childViews.length; i < l; i++)
+					for (var i = 0, l = this._cl_childViews.length; i < l; i++) 
 						this._cl_childViews[i]._cl_x.state = false;
+				} else if (this.relY()) {
+					this.relY(false);
 				}
 				this.redraw();
 				return this;
@@ -122,8 +124,10 @@ a5.Package('a5.cl')
 			if (value !== undefined) {
 				this._cl_relY = value;
 				if (value === false) {
-					for (var i = 0, l = this._cl_childViews.length; i < l; i++)
+					for (var i = 0, l = this._cl_childViews.length; i < l; i++) 
 						this._cl_childViews[i]._cl_y.state = false;
+				} else if (this.relX()) {
+					this.relX(false);
 				}
 				this.redraw();
 				return this;
