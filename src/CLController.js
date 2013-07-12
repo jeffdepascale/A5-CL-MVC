@@ -193,7 +193,7 @@ a5.Package('a5.cl')
 			if(this._cl_mappable)
 				this.MVC().application().dispatchEvent(im.CLMVCEvent.RENDER_CONTROLLER, {controller:this}, false);
 			if(callback)
-				callback.call(this);
+				callback.call(this, this._cl_view);
 		}
 		
 		/**
