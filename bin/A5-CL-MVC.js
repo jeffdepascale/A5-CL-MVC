@@ -368,7 +368,10 @@ a5.Package('a5.cl.mvc.core')
 			else if(params.url) window.location = params.url;
 			else foundPath = false;
 			if (!foundPath) {
-				if (params.forceHash != undefined) hash.setHash(params.forceHash, true);
+				if (params.forceHash != undefined) {
+					params.hash = params.forceHash;
+					hash.setHash(params.forceHash, true);
+				}
 				if (params.controller != undefined) 
 					this.processMapping(params);
 			}
@@ -855,12 +858,19 @@ a5.Package("a5.cl")
 		}
 		
 		proto._cl_initializeElement = function(){
-			this._cl_viewElement.className = proto.className.call(this);
-			this._cl_viewElement.style.backgroundColor = 'transparent';
+			var cssClassStr = "a5View ",
+				ancestors = this.constructor.getAncestors();
+			for (var i = 0, l = ancestors.length; i < l; i++) {
+				if(ancestors[i].fullPackageCSSName === true)
+					cssClassStr += ancestors[i].namespace().replace(/\./g, '_');
+				else
+					cssClassStr += ancestors[i].className();
+				cssClassStr += " ";
+			}
+			cssClassStr += this.constructor.fullPackageCSSName ? this.namespace().replace(/\./g, '_') : this.className();
+			this._cl_viewElement.className = cssClassStr;
 			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
 			this._cl_viewElement.id =  proto.instanceUID.call(this);
-			this._cl_viewElement.style.zoom = 1;
-			this._cl_viewElement.style.position = 'absolute';
 			this._cl_viewElement.style.display = 'none';
 			this._cl_viewElement.a5Ref = this;
 		}
@@ -4382,7 +4392,7 @@ a5.Package('a5.cl')
 			if(this._cl_mappable)
 				this.MVC().application().dispatchEvent(im.CLMVCEvent.RENDER_CONTROLLER, {controller:this}, false);
 			if(callback)
-				callback.call(this);
+				callback.call(this, this._cl_view);
 		}
 		
 		/**
@@ -5166,6 +5176,13 @@ a5.Package('a5.cl.mvc')
 					cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
+			
+			//generate default view css
+			var style = document.createElement('style');
+			style.type = 'text/css';
+			style.innerHTML = '.a5View { background-color:transparent; zoom:1;position:absolute; }';
+			document.getElementsByTagName('head')[0].appendChild(style);
+			
 			if (cfg.rootController) {
 				if(cfg.rootController.indexOf('.') !== -1)
 					controller = a5.Create(a5.GetNamespace(cfg.rootController));

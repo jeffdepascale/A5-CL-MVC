@@ -198,12 +198,19 @@ a5.Package("a5.cl")
 		}
 		
 		proto._cl_initializeElement = function(){
-			this._cl_viewElement.className = proto.className.call(this);
-			this._cl_viewElement.style.backgroundColor = 'transparent';
+			var cssClassStr = "a5View ",
+				ancestors = this.constructor.getAncestors();
+			for (var i = 0, l = ancestors.length; i < l; i++) {
+				if(ancestors[i].fullPackageCSSName === true)
+					cssClassStr += ancestors[i].namespace().replace(/\./g, '_');
+				else
+					cssClassStr += ancestors[i].className();
+				cssClassStr += " ";
+			}
+			cssClassStr += this.constructor.fullPackageCSSName ? this.namespace().replace(/\./g, '_') : this.className();
+			this._cl_viewElement.className = cssClassStr;
 			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
 			this._cl_viewElement.id =  proto.instanceUID.call(this);
-			this._cl_viewElement.style.zoom = 1;
-			this._cl_viewElement.style.position = 'absolute';
 			this._cl_viewElement.style.display = 'none';
 			this._cl_viewElement.a5Ref = this;
 		}

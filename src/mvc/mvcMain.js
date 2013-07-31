@@ -271,6 +271,13 @@ a5.Package('a5.cl.mvc')
 					cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
+			
+			//generate default view css
+			var style = document.createElement('style');
+			style.type = 'text/css';
+			style.innerHTML = '.a5View { background-color:transparent; zoom:1;position:absolute; }';
+			document.getElementsByTagName('head')[0].appendChild(style);
+			
 			if (cfg.rootController) {
 				if(cfg.rootController.indexOf('.') !== -1)
 					controller = a5.Create(a5.GetNamespace(cfg.rootController));
