@@ -831,7 +831,8 @@ a5.Package("a5.cl")
 		proto.draw = function(parentView){
 			if (!this._cl_initialized && !this._cl_initialRenderComplete) {
 				this._cl_initialized = true;
-				this._cl_setParent(parentView);
+				if(parentView)
+					this._cl_setParent(parentView);
 				this.redraw();
 				this.viewReady();
 			}
@@ -857,21 +858,28 @@ a5.Package("a5.cl")
 			}		
 		}
 		
-		proto._cl_initializeElement = function(){
+		proto._cl_initializeElement = function(){			
 			var cssClassStr = "a5View ",
-				ancestors = this.constructor.getAncestors();
+				ancestors = this.constructor.getAncestors(),
+				clViewFound = false;
 			for (var i = 0, l = ancestors.length; i < l; i++) {
-				if(ancestors[i].fullPackageCSSName === true)
-					cssClassStr += ancestors[i].namespace().replace(/\./g, '_');
-				else
-					cssClassStr += ancestors[i].className();
-				cssClassStr += " ";
+				if(ancestors[i].namespace() === 'a5.cl.CLView')
+					clViewFound = true;
+				if (clViewFound) {
+					if (ancestors[i].fullPackageCSSName === true) 
+						cssClassStr += ancestors[i].namespace().replace(/\./g, '_');
+					else cssClassStr += ancestors[i].className();
+					cssClassStr += " ";
+				}
 			}
 			cssClassStr += this.constructor.fullPackageCSSName ? this.namespace().replace(/\./g, '_') : this.className();
 			this._cl_viewElement.className = cssClassStr;
 			this._cl_viewElement.style.overflowX = this._cl_viewElement.style.overflowY = this._cl_showOverflow ? 'visible' : 'hidden';
-			this._cl_viewElement.id =  proto.instanceUID.call(this);
+			this._cl_viewElement.id = this.instanceUID();
 			this._cl_viewElement.style.display = 'none';
+			this._cl_viewElement.style.backgroundColor = 'transparent';
+			this._cl_viewElement.style.position = 'absolute';
+			this._cl_viewElement.style.zoom = 1;
 			this._cl_viewElement.a5Ref = this;
 		}
 		
@@ -887,6 +895,18 @@ a5.Package("a5.cl")
 				parent = parent._cl_parentView;
 			}
 			return false;
+		}
+		
+		proto.controller = function(direct){
+			if(direct)
+				return this._cl_controller;
+			var v = this;
+			do{
+				if(v._cl_controller)
+					return v._cl_controller;
+				v = v.parentView();
+			} while(v);
+			return null;
 		}
 		
 		/**
@@ -1303,6 +1323,18 @@ a5.Package("a5.cl")
 		 * @name viewReady
 		 */
 		proto.viewReady = function(){
+			if(!this.plugins().getRegisteredProcess('instanceUIDWriter')&& this.id() !== this.instanceUID()){
+				var controller = this.controller();
+				if (controller) {
+					var uid = a5.HashString(this.controller().namespace() + this.id());
+					if (!document.getElementById(uid)) {
+						this._a5_instanceUID = uid;
+						this._cl_viewElement.id = uid;
+					}
+				}
+			}
+			if(this.id() !== this.instanceUID())
+				this._cl_viewElement.setAttribute('data-a5ID', this.id());
 			this._cl_viewIsReady = true;
 			this.dispatchEvent(new im.CLViewEvent(im.CLViewEvent.VIEW_READY));
 		}
@@ -1336,7 +1368,6 @@ a5.Package("a5.cl")
 		 * @param {a5.cl.CLViewContainer} parentView The parent view it is being added to.
 		 */
 		proto.addedToParent = function(parentView){
-			
 		}
 		
 		/**
@@ -5176,12 +5207,6 @@ a5.Package('a5.cl.mvc')
 					cls.dispatchEvent(a5.cl.CLAddon.INITIALIZE_COMPLETE);
 			}
 			var controllerNS;
-			
-			//generate default view css
-			var style = document.createElement('style');
-			style.type = 'text/css';
-			style.innerHTML = '.a5View { background-color:transparent; zoom:1;position:absolute; }';
-			document.getElementsByTagName('head')[0].appendChild(style);
 			
 			if (cfg.rootController) {
 				if(cfg.rootController.indexOf('.') !== -1)
