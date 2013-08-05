@@ -463,14 +463,14 @@ a5.Package('a5.cl')
 		
 		proto.Override.width = function(val){
 			if (val === 'scroll')
-				return Math.max(this._cl_width.content + this._cl_calculatedClientOffset.left + this._cl_calculatedOffset.left, this._cl_width.offset);
+				return Math.max(this._cl_width.content, this._cl_width.offset);
 			else
 				return proto.superclass().width.apply(this, arguments);
 		}
 		
 		proto.Override.height = function(val){
 			if (val === 'scroll')
-				return Math.max(this._cl_height.content + this._cl_calculatedClientOffset.top + this._cl_calculatedOffset.top, this._cl_height.offset);
+				return Math.max(this._cl_height.content, this._cl_height.offset);
 			else
 				return proto.superclass().height.apply(this, arguments);
 		}
@@ -497,7 +497,8 @@ a5.Package('a5.cl')
 				shouldRedraw = im.CLView._cl_viewCanRedraw(this),
 				contentWidthChanged = false,
 				contentHeightChanged = false;
-			if(shouldRedraw){
+			//TODO: shouldRedraw causes rendering issues here - UIImage does not recalculate properly without a render here
+			if(true){
 				//a5.cl.CLViewContainer.logRedraw(this);
 				//if we're scrolling, adjust the inner sizes accordingly
 				this._cl_width.inner = this._cl_width.client - (this._cl_scrollYEnabled.state ? scrollBarWidth : 0);
@@ -566,9 +567,9 @@ a5.Package('a5.cl')
 					this._cl_alertParentOfRedraw();
 				}
 				
-				if (this._cl_scrollXEnabled.value && outerW > this._cl_width.client + this._cl_calculatedClientOffset.right) 
+				if (this._cl_scrollXEnabled.value && outerW > this._cl_width.client) 
 					shouldXScroll = true;
-				if (this._cl_scrollYEnabled.value && outerH > this._cl_height.client + this._cl_calculatedClientOffset.bottom) 
+				if (this._cl_scrollYEnabled.value && outerH > this._cl_height.client) 
 					shouldYScroll = true;
 				
 				if( (this._cl_scrollXEnabled.value && this._cl_scrollYEnabled.value) 			// if both X and Y can scroll
@@ -610,7 +611,8 @@ a5.Package('a5.cl')
 						this._cl_childViews[i]._cl_render();
 				}
 				
-				if (suppressRender !== true) 
+				//TODO: causes rendering issues - UIImage does not recalculate properly without a render here
+				//if (suppressRender !== true) 
 					this._cl_render();
 			}
 			return redrawVals;

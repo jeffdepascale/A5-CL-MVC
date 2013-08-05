@@ -667,88 +667,95 @@ a5.Package('a5.cl.mvc.core')
 a5.Package("a5.cl")
 	
 	.Import('a5.cl.CLMVCEvent',
+			'a5.cl.core.Utils',
 			'a5.cl.mvc.CLViewEvent')
 	.Extends('CLMVCBase')
 	.Static(function(CLView, im){
 		
 		CLView.customViewDefNodes = ['EventListener', 'Bind'];
 		
-		CLView._cl_calcOffsetObj = function(obj, calcProp, props){
-			var i, l, isObj, propVal,
-				changed = false,
-				cachedProp = obj[calcProp];
-			obj[calcProp] = {width:0, height:0, left:0, right:0, top:0, bottom:0};
-			for(i = 0, l=props.length; i<l; i++){
-				propVal = obj[props[i]];
-				isObj = typeof propVal === 'object';
-				obj[calcProp].left += (isObj ? (propVal.left !== undefined ? propVal.left:0):propVal);
-				obj[calcProp].right += (isObj ? (propVal.right !== undefined ? propVal.right:0):propVal);
-				obj[calcProp].top += (isObj ? (propVal.top !== undefined ? propVal.top:0):propVal);
-				obj[calcProp].bottom += (isObj ? (propVal.bottom !== undefined ? propVal.bottom:0):propVal);
-			}
-			obj[calcProp].width = obj[calcProp].left + obj[calcProp].right;
-			obj[calcProp].height = obj[calcProp].top + obj[calcProp].bottom;
-			return (obj[calcProp].left !== cachedProp.left || obj[calcProp].right !== cachedProp.right || obj[calcProp].top !== cachedProp.top || obj[calcProp].bottom !== cachedProp.bottom);
-		}
-		
-		CLView._cl_setWH = function(obj, prop, param){
-			//if(param.isDefault && obj.parentView()['_cl_rel' + (prop === 'width') ? 'X' : 'Y'] === true)
-				//return obj[prop]('scroll');
-			if(param.percent !== false){
-				var parentScrolling = obj._cl_parentView[prop === 'width' ? 'scrollXEnabled' : 'scrollYEnabled']('state'),
-					parentSize = parentScrolling ? (obj._cl_parentView[prop]('scroll') - obj._cl_parentView._cl_calculatedClientOffset[prop] - obj._cl_parentView._cl_calculatedOffset[prop]) : obj._cl_parentView[prop]('inner');
-				return parentSize * param.percent;
-			} else if(param.relative !== false) 
-				return obj._cl_parentView[prop]('inner') + param.relative;
-			else if(param.auto !== false)
-				return obj[prop]('content') + obj._cl_calculatedClientOffset[prop] + obj._cl_calculatedOffset[prop];
-			else if(param.relative === false && param.percent === false && param.auto === false) 
-				return param.value;
-			else
-				return null;
-		}
-		
-		CLView._cl_updateWH = function(obj, val, prop, propVal, min, max, setProp){
-			var fullOffset = obj._cl_calculatedOffset[prop] + obj._cl_calculatedClientOffset[prop],
-				retVal = val - fullOffset,
-				maxDim;
+		CLView._cl_updateWH = function(obj, prop, propVal, min, max, setProp, padding, parentPadding){			
+			var val = null;
+			if(setProp.relative !== false) 
+				val = obj._cl_parentView[prop]('inner') + setProp.relative;
+			else if(setProp.auto !== false)
+				val = obj[prop]('content');
+			else if(setProp.relative === false && setProp.percent === false && setProp.auto === false) 
+				val = setProp.value;
+							
+			var setVal = val,
+				maxDim,
+				clientVal = obj._cl_parentView._cl_viewElement[prop === 'width' ? 'clientWidth' : 'clientHeight'];
 			if(obj._cl_parentView.constrainChildren() && obj._cl_parentView['_cl_' + prop].auto === false){
-				maxDim = (retVal || obj[prop]('inner')) + propVal;
-				if (maxDim > obj._cl_parentView[prop]('inner')) retVal = obj._cl_parentView[prop]('inner') - propVal - fullOffset;
+				maxDim = (setVal || obj[prop]('inner')) + propVal;
+				if (maxDim > clientVal) setVal = clientVal - propVal;
 			}
-			if (min !== null && (retVal + obj._cl_calculatedClientOffset[prop]) < min) retVal = min - obj._cl_calculatedClientOffset[prop];
-			if (max !== null && (retVal + obj._cl_calculatedClientOffset[prop]) > max) retVal = max - obj._cl_calculatedClientOffset[prop];
-			retVal = (retVal >= 0 ? retVal : 0);
-			setProp.client = setProp.inner = setProp.content = retVal;
-			setProp.offset = retVal + fullOffset;
-			return retVal;
+			
+			var isPerc = false;
+			if (setProp.percent !== false) {
+				if (obj._cl_padding == null && obj._cl_parentView._cl_padding == null) {
+					isPerc = true;
+				} else {
+					setVal = clientVal;
+					if(obj._cl_padding !== null)
+						setVal -= padding[prop];
+					if(obj._cl_parentPadding !== null)
+						setVal -= parentPadding[prop];
+					setVal = setVal * setProp.percent;
+				}
+			} else if(setVal !== null){
+				setVal = Math.max(0, setVal);
+			}
+			
+			if(setVal === null)
+				setVal = clientVal;
+			if (min !== null && (setVal < min)) setVal = min;
+			if (max !== null && (setVal > max)) setVal = max;
+			setVal = (setVal >= 0 ? setVal : 0);
+			setProp.client = setProp.inner = setProp.content = setVal;
+			setProp.offset = setVal;	
+			
+			obj._cl_pendingViewElementProps[prop] = (isPerc ? setProp.percent * 100 + '%' : setVal + 'px');
 		}
 				
-		CLView._cl_updateXY = function(obj, propVal, align, inner, param){
-			var retVal = 0,
-				clientOffset = obj._cl_parentView ? obj._cl_parentView._cl_calculatedClientOffset[param === 'width' ? 'left' : 'top'] : 0;
+		CLView._cl_updateXY = function(obj, prop, propVal, align, inner, size, parentPadding){		
+			var setVal;
 			switch (align) {
 				case "left":
+					setVal = propVal + parentPadding.left;
+					break;
 				case "top":
-					retVal = propVal + clientOffset;
+					setVal = propVal + parentPadding.top;
 					break;
 				case "center":
+					setVal = inner / 2 - size / 2 + propVal;
+					break;
 				case "middle":
-					retVal = inner / 2 - obj[param]() / 2 + propVal + clientOffset;
-					if(retVal < clientOffset) retVal = clientOffset;
+					setVal = inner / 2 - size / 2 + propVal;
 					break;
 				case "right":
+					setVal = inner - size + propVal + parentPadding.left;
+					break;
 				case "bottom":
-					retVal = inner - obj[param]() + propVal + clientOffset;
+					setVal = inner - size + propVal + parentPadding.top;
 					break;
 			}
-			return retVal;
+			obj._cl_pendingViewElementProps[prop] = setVal + 'px';
 		}
 		
-		CLView._cl_initialRedraw = function(obj){
-			if (obj._cl_initialized && !obj._cl_initialRenderComplete) {
-				obj._cl_initialRenderComplete = true;
-				if(obj._cl_visible) obj._cl_viewElement.style.display = obj._cl_defaultDisplayStyle;
+		CLView._cl_standardizeStyleObj = function(prop){
+			var vals = {top:0, bottom:0, left:0, right:0, width:0, height:0},
+				pProp;
+			if (prop) {
+				if (typeof prop === 'object') {
+					for(pProp in prop)
+						vals[pProp] = prop[pProp];
+				} else {
+					for(pProp in prop)
+						vals[pProp] = prop;
+				}
+				vals.width = vals.left + vals.right;
+				vals.height = vals.top + vals.bottom;
 			}
 		}
 		
@@ -762,10 +769,6 @@ a5.Package("a5.cl")
 				view._cl_redrawPending = false;
 			return isValid;
 		}
-		
-		CLView._cl_useTransforms = false;
-		
-		CLView._cl_forceGPU = false;
 	})
 	
 	
@@ -793,10 +796,7 @@ a5.Package("a5.cl")
 			this._cl_minHeight = null;
 			this._cl_maxWidth = null;
 			this._cl_maxHeight = null;
-			this._cl_borderWidth = {top:0, left:0, right:0, bottom:0};
-			this._cl_padding = {top:0, left:0, right:0, bottom:0};
-			this._cl_calculatedOffset = {width:0, height:0, left:0, right:0, top:0, bottom:0};
-			this._cl_calculatedClientOffset = {width:0, height:0, left:0, right:0, top:0, bottom:0};
+			this._cl_padding = null;
 			this._cl_redrawPending = false;
 			this._cl_initialized = false;
 			this._cl_initialRenderComplete = false;
@@ -818,8 +818,6 @@ a5.Package("a5.cl")
 		
 		proto.CLView = function(){
 			proto.superclass(this);
-			if(CLView._cl_transformProp === undefined)
-				CLView._cl_transformProp = a5.cl.initializers.dom.Utils.getCSSProp('transform');
 			this._cl_viewElement = document.createElement(this._cl_viewElementType);
 			this._cl_initializeElement();
 		}
@@ -844,8 +842,8 @@ a5.Package("a5.cl")
 		}
 		
 		proto.addCSSClass = function(name){
-			if(this._cl_viewElement.className.indexOf(name) !== 0 && this._cl_viewElement.className.indexOf(" " + name) === -1)
-				this._cl_viewElement.className += " " + name;
+			if (name && this._cl_viewElement.className.indexOf(name) !== 0 && this._cl_viewElement.className.indexOf(" " + name) === -1)
+				this._cl_viewElement.className += (" " + name);
 		}
 		
 		proto.pullExistingElem = function(elem){
@@ -1017,9 +1015,7 @@ a5.Package("a5.cl")
 						if(parentView === value)
 							return retVal;
 						retVal += 	parentView.y(true) + 
-									parentView.scrollY() + 
-									parentView._cl_calculatedOffset.top + 
-									parentView._cl_calculatedClientOffset.top;
+									parentView.scrollY();
 						parentView = parentView.parentView();
 					}					
 				} else {
@@ -1057,9 +1053,7 @@ a5.Package("a5.cl")
 						if(parentView === value)
 							return retVal;
 						retVal += 	parentView.x(true) + 
-									parentView.scrollX() + 
-									parentView._cl_calculatedOffset.left + 
-									parentView._cl_calculatedClientOffset.left;
+									parentView.scrollX();
 						parentView = parentView.parentView();
 					}
 				} else {
@@ -1229,8 +1223,6 @@ a5.Package("a5.cl")
 					for (var prop in width)
 						this._cl_viewElement.style['border' + (a5.cl.core.Utils.initialCap(prop)) + 'Width'] = (width[prop] || 0) + 'px';
 				}
-				this._cl_borderWidth = width;
-				this._cl_calculateOffset();
 				return this;
 			}
 			return this._cl_viewElement.style.borderWidth;
@@ -1301,7 +1293,12 @@ a5.Package("a5.cl")
 				if(typeof duration === 'number')
 					return this.animate(duration, {padding:value, ease:ease});
 				this._cl_padding = value;
-				this._cl_calculateOffset();
+				if (typeof value === 'object') {
+					for (var prop in value)
+						this._cl_viewElement.style['padding' + im.Utils.initialCap(prop)] = value[prop] + 'px';
+				} else {
+					this._cl_viewElement.style.padding = value + 'px';
+				}
 				return this;
 			}
 			return this._cl_padding;
@@ -1698,28 +1695,31 @@ a5.Package("a5.cl")
 			this._cl_parentView = parentView;
 		}
 		
-		proto._cl_calculateOffset = function(){
-			var offsetChanged = CLView._cl_calcOffsetObj(this, '_cl_calculatedOffset', ['_cl_borderWidth']),
-				clientOffsetChanged = CLView._cl_calcOffsetObj(this, '_cl_calculatedClientOffset', ['_cl_padding']);
-			if(offsetChanged || clientOffsetChanged)
-				this.redraw();
-		}
-		
 		proto._cl_redraw = function(force, suppressRender){
+			if (this._cl_initialized && !this._cl_initialRenderComplete) {
+				this._cl_initialRenderComplete = true;
+				if(this._cl_visible) this._cl_viewElement.style.display = this._cl_defaultDisplayStyle;
+			}
+			
 			if ((!this._cl_initialRenderComplete || this._cl_redrawPending || force) && a5.cl.CLView._cl_viewCanRedraw(this)) {
 				var propXVal = this._cl_x.percent !== false ? (this._cl_parentView.width() * this._cl_x.percent) : this.x(true),
 				propYVal = this._cl_y.percent !== false ? (this._cl_parentView.height() * this._cl_y.percent) : this.y(true),
-				w = CLView._cl_setWH(this, 'width', this._cl_width),
-				h = CLView._cl_setWH(this, 'height', this._cl_height),
-				forceRedraw = (w !== undefined || h !== undefined);
-				this._cl_pendingViewElementProps.width = w !== null ? (Math.max(0, CLView._cl_updateWH(this, w, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width)) + 'px') : undefined;
-				this._cl_pendingViewElementProps.height = h !== null ? (Math.max(0, CLView._cl_updateWH(this, h, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height)) + 'px') : undefined;		
-				this._cl_pendingViewElementProps.left = CLView._cl_updateXY(this, propXVal, this._cl_alignX, this._cl_parentView.width('inner'), 'width') + 'px';
-				this._cl_pendingViewElementProps.top = CLView._cl_updateXY(this, propYVal, this._cl_alignY, this._cl_parentView.height('inner'), 'height') + 'px';
-				this._cl_pendingViewElementProps.paddingTop = this._cl_calculatedClientOffset.top + 'px';
-				this._cl_pendingViewElementProps.paddingRight = this._cl_calculatedClientOffset.right + 'px';
-				this._cl_pendingViewElementProps.paddingBottom = this._cl_calculatedClientOffset.bottom + 'px';
-				this._cl_pendingViewElementProps.paddingLeft = this._cl_calculatedClientOffset.left + 'px';
+				w, h, widthVal, heightVal, forceRedraw,
+				parentPadding = CLView._cl_standardizeStyleObj(this._cl_parentView._cl_padding),
+				objPadding = CLView._cl_standardizeStyleObj(this._cl_padding);
+				
+				
+				CLView._cl_updateXY(this, 'left', propXVal, this._cl_alignX, 
+											this._cl_parentView._cl_viewElement.clientWidth, 
+											this._cl_width.percent === false ? this.width() : this._cl_parentView._cl_viewElement.clientWidth*this._cl_width.percent,
+											parentPadding);
+				CLView._cl_updateXY(this, 'top', propYVal, this._cl_alignY, 
+											this._cl_parentView._cl_viewElement.clientHeight, 
+											this._cl_height.percent === false ? this.height() : this._cl_parentView._cl_viewElement.clientHeight*this._cl_height.percent,
+											parentPadding);
+				CLView._cl_updateWH(this, 'width', propXVal, this._cl_minWidth, this._cl_maxWidth, this._cl_width, objPadding, parentPadding);
+				CLView._cl_updateWH(this, 'height', propYVal, this._cl_minHeight, this._cl_maxHeight, this._cl_height, objPadding, parentPadding);				
+				forceRedraw = true; //(w !== undefined || h !== undefined);
 				
 				if(this._cl_redrawPending)
 					this._cl_alertParentOfRedraw();
@@ -1728,10 +1728,8 @@ a5.Package("a5.cl")
 				
 				if(suppressRender !== true)
 					this._cl_render();
-				CLView._cl_initialRedraw(this);
 				return {force:forceRedraw, shouldRedraw:true};
 			}
-			CLView._cl_initialRedraw(this);
 			return {force:false, shouldRedraw:false};
 		}
 		
@@ -1747,24 +1745,7 @@ a5.Package("a5.cl")
 				this._cl_parentView._cl_childRedrawn(this, changes);
 		}
 		
-		proto._cl_render = function(){
-			if(CLView._cl_useTransforms && CLView._cl_transformProp){
-				var val = '';
-				if (this._cl_pendingViewElementProps.top !== undefined) {
-					val += 'translateY(' + this._cl_pendingViewElementProps.top + ') ';
-					this._cl_currentViewElementProps.top = this._cl_pendingViewElementProps.top;
-				}
-				if (this._cl_pendingViewElementProps.left !== undefined) {
-					val += 'translateX(' + this._cl_pendingViewElementProps.left + ') ';
-					this._cl_currentViewElementProps.left = this._cl_pendingViewElementProps.left;
-				}
-				if (val !== '') {
-					if(CLView._cl_forceGPU)
-						val += 'translateZ(0px)';
-					this._cl_viewElement.style[CLView._cl_transformProp] = val;
-				}				
-			}
-			
+		proto._cl_render = function(){			
 			for(var prop in this._cl_pendingViewElementProps){
 				var value = this._cl_pendingViewElementProps[prop];
 				if (this._cl_currentViewElementProps[prop] !== value)
@@ -3259,8 +3240,8 @@ a5.Package('a5.cl')
 		proto.Override.width = function(value){
 			if (value === 'scroll' || value === 'content') {
 				//if(typeof this._cl_scrollWidth !== 'number')
-				this._cl_scrollWidth = this._cl_viewElement.scrollWidth - this._cl_calculatedClientOffset.width;
-				return value === 'content' ? this._cl_scrollWidth : Math.max(this._cl_scrollWidth + this._cl_calculatedClientOffset.left + this._cl_calculatedOffset.left, this.width('offset'));
+				this._cl_scrollWidth = this._cl_viewElement.scrollWidth;
+				return value === 'content' ? this._cl_scrollWidth : Math.max(this._cl_scrollWidth, this.width('offset'));
 			}
 			return proto.superclass().width.apply(this, arguments);
 		}
@@ -3268,8 +3249,8 @@ a5.Package('a5.cl')
 		proto.Override.height = function(value){
 			if (value === 'scroll' || value === 'content') {
 				//if (typeof this._cl_scrollHeight !== 'number') 
-				this._cl_scrollHeight = this._cl_viewElement.scrollHeight - this._cl_calculatedClientOffset.height;
-				return value === 'content' ? this._cl_scrollHeight : Math.max(this._cl_scrollHeight + this._cl_calculatedClientOffset.top + this._cl_calculatedOffset.top, this.height('offset'));
+				this._cl_scrollHeight = this._cl_viewElement.scrollHeight;
+				return value === 'content' ? this._cl_scrollHeight : Math.max(this._cl_scrollHeight, this.height('offset'));
 			} 
 			return proto.superclass().height.apply(this, arguments);
 			
@@ -3278,12 +3259,10 @@ a5.Package('a5.cl')
 		proto.Override._cl_redraw = function(force, suppressRender){
 			var redrawVals = proto.superclass()._cl_redraw.call(this, force, true);
 			if (redrawVals.shouldRedraw) {
-				this._cl_pendingViewElementProps.paddingTop = this._cl_calculatedClientOffset.top + 'px';
-				this._cl_pendingViewElementProps.paddingRight = this._cl_calculatedClientOffset.right + 'px';
-				this._cl_pendingViewElementProps.paddingBottom = this._cl_calculatedClientOffset.bottom + 'px';
-				this._cl_pendingViewElementProps.paddingLeft = this._cl_calculatedClientOffset.left + 'px';
-				this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width) + 'px';
-				this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height) + 'px';
+				if(this._cl_width.percent === false)
+					this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width)) + 'px';
+				if(this._cl_height.percent === false)
+					this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height)) + 'px';
 				
 				if(suppressRender !== true)
 					this._cl_render();
@@ -3833,14 +3812,14 @@ a5.Package('a5.cl')
 		
 		proto.Override.width = function(val){
 			if (val === 'scroll')
-				return Math.max(this._cl_width.content + this._cl_calculatedClientOffset.left + this._cl_calculatedOffset.left, this._cl_width.offset);
+				return Math.max(this._cl_width.content, this._cl_width.offset);
 			else
 				return proto.superclass().width.apply(this, arguments);
 		}
 		
 		proto.Override.height = function(val){
 			if (val === 'scroll')
-				return Math.max(this._cl_height.content + this._cl_calculatedClientOffset.top + this._cl_calculatedOffset.top, this._cl_height.offset);
+				return Math.max(this._cl_height.content, this._cl_height.offset);
 			else
 				return proto.superclass().height.apply(this, arguments);
 		}
@@ -3936,9 +3915,9 @@ a5.Package('a5.cl')
 					this._cl_alertParentOfRedraw();
 				}
 				
-				if (this._cl_scrollXEnabled.value && outerW > this._cl_width.client + this._cl_calculatedClientOffset.right) 
+				if (this._cl_scrollXEnabled.value && outerW > this._cl_width.client) 
 					shouldXScroll = true;
-				if (this._cl_scrollYEnabled.value && outerH > this._cl_height.client + this._cl_calculatedClientOffset.bottom) 
+				if (this._cl_scrollYEnabled.value && outerH > this._cl_height.client) 
 					shouldYScroll = true;
 				
 				if( (this._cl_scrollXEnabled.value && this._cl_scrollYEnabled.value) 			// if both X and Y can scroll

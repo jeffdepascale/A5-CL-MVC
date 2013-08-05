@@ -289,8 +289,8 @@ a5.Package('a5.cl')
 		proto.Override.width = function(value){
 			if (value === 'scroll' || value === 'content') {
 				//if(typeof this._cl_scrollWidth !== 'number')
-				this._cl_scrollWidth = this._cl_viewElement.scrollWidth - this._cl_calculatedClientOffset.width;
-				return value === 'content' ? this._cl_scrollWidth : Math.max(this._cl_scrollWidth + this._cl_calculatedClientOffset.left + this._cl_calculatedOffset.left, this.width('offset'));
+				this._cl_scrollWidth = this._cl_viewElement.scrollWidth;
+				return value === 'content' ? this._cl_scrollWidth : Math.max(this._cl_scrollWidth, this.width('offset'));
 			}
 			return proto.superclass().width.apply(this, arguments);
 		}
@@ -298,8 +298,8 @@ a5.Package('a5.cl')
 		proto.Override.height = function(value){
 			if (value === 'scroll' || value === 'content') {
 				//if (typeof this._cl_scrollHeight !== 'number') 
-				this._cl_scrollHeight = this._cl_viewElement.scrollHeight - this._cl_calculatedClientOffset.height;
-				return value === 'content' ? this._cl_scrollHeight : Math.max(this._cl_scrollHeight + this._cl_calculatedClientOffset.top + this._cl_calculatedOffset.top, this.height('offset'));
+				this._cl_scrollHeight = this._cl_viewElement.scrollHeight;
+				return value === 'content' ? this._cl_scrollHeight : Math.max(this._cl_scrollHeight, this.height('offset'));
 			} 
 			return proto.superclass().height.apply(this, arguments);
 			
@@ -308,12 +308,10 @@ a5.Package('a5.cl')
 		proto.Override._cl_redraw = function(force, suppressRender){
 			var redrawVals = proto.superclass()._cl_redraw.call(this, force, true);
 			if (redrawVals.shouldRedraw) {
-				this._cl_pendingViewElementProps.paddingTop = this._cl_calculatedClientOffset.top + 'px';
-				this._cl_pendingViewElementProps.paddingRight = this._cl_calculatedClientOffset.right + 'px';
-				this._cl_pendingViewElementProps.paddingBottom = this._cl_calculatedClientOffset.bottom + 'px';
-				this._cl_pendingViewElementProps.paddingLeft = this._cl_calculatedClientOffset.left + 'px';
-				this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width) - this._cl_calculatedClientOffset.width) + 'px';
-				this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height) - this._cl_calculatedClientOffset.height) + 'px';
+				if(this._cl_width.percent === false)
+					this._cl_pendingViewElementProps.width = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.width)) + 'px';
+				if(this._cl_height.percent === false)
+					this._cl_pendingViewElementProps.height = Math.max(0, this._cl_intFromPX(this._cl_pendingViewElementProps.height)) + 'px';
 				
 				if(suppressRender !== true)
 					this._cl_render();
