@@ -79,7 +79,7 @@ a5.Package('a5.cl.core.viewDef')
 						processed.push(a5.GetNamespace(attr, this._cl_imports));
 						break;
 					case '{RegExp}': // resolve regexp
-						var split = attr.split('/');
+						var split = attr.match(/\/(.*)\/(.*)/);
 						processed.push(new RegExp(split[1], split[2]));
 						break;
 					default: //try to guess by default
