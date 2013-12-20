@@ -295,13 +295,13 @@ a5.Package('a5.cl')
 				if(index > this._cl_childViews.length-1) index = null;
 				this.willAddView(view);
 				view.draw(this);
-				this.viewAdded(view);
-				view._cl_setParent(this);
-				view._cl_addedToParent(this);
-				if(callback) callback(view);
 				if(index !== null) this._cl_childViews.splice(index, 0, view)
 				else this._cl_childViews.push(view);
 				this._cl_orderChildren();
+				this.viewAdded(view);
+				view._cl_setParent(this);
+				view._cl_addedToParent(this);
+				if(callback) callback(view);			
 				if(this._cl_passDataToChildren && this._cl_passedData)
 					view.renderFromData(this._cl_passedData)
 			} else {

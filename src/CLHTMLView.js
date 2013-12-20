@@ -34,6 +34,7 @@ a5.Package('a5.cl')
 			this._cl_isInDocument = false;
 			this._cl_htmlViewReady = false;
 			this._cl_mutationObserver = null;
+			this._cl_updateDispatchPending = false;
 		});
 		
 		proto.CLHTMLView = function(val, isURL){
@@ -350,8 +351,20 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_dispatchUpdated = function(){
-			this._cl_htmlViewReady = true;
-			this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);		
+			if (this.isInTree()) {
+				this._cl_htmlViewReady = true;
+				this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);
+			} else {
+				this._cl_updateDispatchPending = true;
+			}
+		}
+		
+		proto.Override.addedToTree = function(){
+			proto.superclass().addedToTree.apply(this, arguments);
+			if (this._cl_updateDispatchPending) {
+				this._cl_updateDispatchPending = false;
+				this._cl_dispatchUpdated();
+			}
 		}
 		
 		proto._cl_replaceNodeValue = function(node, value){
@@ -362,9 +375,7 @@ a5.Package('a5.cl')
 						asyncCall.cancel();
 					} else if (node.innerHTML !== "") {
 						asyncCall.cancel();
-						this.async(function(){
-							self.htmlUpdated.call(self, false);
-						}, null, 200);
+						self.htmlUpdated.call(self, false);
 					}
 				};
 			
