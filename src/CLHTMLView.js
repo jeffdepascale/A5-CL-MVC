@@ -33,6 +33,7 @@ a5.Package('a5.cl')
 			this._cl_clickHandlingEnabled = false;
 			this._cl_isInDocument = false;
 			this._cl_htmlViewReady = false;
+			this._cl_mutationObserver = null;
 		});
 		
 		proto.CLHTMLView = function(val, isURL){
@@ -45,10 +46,18 @@ a5.Package('a5.cl')
 				else
 					this.drawHTML(val);
 			}
+			if (window["MutationObserver"]) {
+				var self = this;
+				this._cl_mutationObserver = new MutationObserver(function(){
+					self._cl_mutationObserver.disconnect();
+					self.htmlUpdated();
+				});
+			}
 		}
 		
 		proto.Override.viewReady = function(){
 			proto.superclass().viewReady.call(this);
+			if(this._l)
 			if (this._cl_cachedHTML !== null) {
 				this.drawHTML(this._cl_cachedHTML);
 				this._cl_cachedHTML = null;
@@ -280,6 +289,9 @@ a5.Package('a5.cl')
 		 * @name htmlUpdated
 		 */
 		proto.htmlUpdated = function(clearScroll){
+			this.height('content');
+			this.width('content');
+			this._cl_dispatchUpdated();
 			if(clearScroll !== false)
 				this._cl_scrollWidth = this._cl_scrollHeight = null;
 			if ((this._cl_height.auto || this._cl_width.auto) && this.parentView())
@@ -338,25 +350,21 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_dispatchUpdated = function(){
-			var self = this;
-			//Async is necessary to account for variances in browser rendering updates
-			this.async(function(){
-				this._cl_htmlViewReady = true;
-				this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);
-			}, null, 200);
+			this._cl_htmlViewReady = true;
+			this.dispatchEvent(CLHTMLView.CONTENT_UPDATED);		
 		}
 		
 		proto._cl_replaceNodeValue = function(node, value){
 			var self = this,
 				asyncCall = null,
 				checkUpdated = function(){
-					if (node.innerHTML !== "" && document.getElementById(this.instanceUID())) {
-						//if auto width/height, set back to auto
-						if(autoWidth) node.style.width = 'auto';
-						if(autoHeight) node.style.height = 'auto';
+					if(!document.getElementById(this.instanceUID())){
 						asyncCall.cancel();
-						self._cl_dispatchUpdated.call(self);
-						self.htmlUpdated.call(self, false);
+					} else if (node.innerHTML !== "") {
+						asyncCall.cancel();
+						this.async(function(){
+							self.htmlUpdated.call(self, false);
+						}, null, 200);
 					}
 				};
 			
@@ -371,28 +379,33 @@ a5.Package('a5.cl')
 			
 			this._cl_scrollWidth = this._cl_scrollHeight = null;
 			
-			if (value != '') {
-				asyncCall = this.cycle(checkUpdated, null, .2, 1000);
+			if (value) {
+				if(this._cl_mutationObserver)
+					this._cl_mutationObserver.observe(this._cl_viewElement, {subtree:true, attributes:true});
+				else
+					asyncCall = this.cycle(checkUpdated, null, .2, 200);
+				if (typeof value == 'string') {
+					node.innerHTML = value;
+				} else {
+					if (a5.cl.core.Utils.isArray(value)) {
+						while(value.length)
+							node.appendChild(value.shift());
+					} else {
+						node.appendChild(value);
+					}
+				}
 			} else {
-				self._cl_dispatchUpdated();
 				this.htmlUpdated(false);
 			}
-			if (typeof value == 'string') {
-				node.innerHTML = value;
-			} else {
-				if (a5.cl.core.Utils.isArray(value)) {
-					while(value.length)
-						node.appendChild(value.shift());
-				} else {
-					node.appendChild(value);
-				}
-				//if auto width/height, set back to auto
-				if(autoWidth) node.style.width = 'auto';
-				if(autoHeight) node.style.height = 'auto';
-			}
+			
+			//if auto width/height, set back to auto
+			if(autoWidth) node.style.width = 'auto';
+			if(autoHeight) node.style.height = 'auto';
 		}
 		
 		proto.dealloc = function(){
 			this._cl_viewElement.onclick  = null;
+			if(this._cl_mutationObserver)
+				this._cl_mutationObserver.disconnect();
 		}
 });
