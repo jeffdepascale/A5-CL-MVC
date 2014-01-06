@@ -1,4 +1,3 @@
-
 /**
  * @class Implements a view with a direct html draw area.
  * @name a5.cl.CLHTMLView
@@ -290,6 +289,9 @@ a5.Package('a5.cl')
 		 * @name htmlUpdated
 		 */
 		proto.htmlUpdated = function(clearScroll){
+			//if auto width/height, set back to auto
+			if(this._cl_width.auto) this._cl_viewElement.style.width = 'auto';
+			if(this._cl_height.auto) this._cl_viewElement.style.height = 'auto';
 			this.height('content');
 			this.width('content');
 			this._cl_dispatchUpdated();
@@ -392,7 +394,7 @@ a5.Package('a5.cl')
 			
 			if (value) {
 				if(this._cl_mutationObserver)
-					this._cl_mutationObserver.observe(this._cl_viewElement, {subtree:true, attributes:true});
+					this._cl_mutationObserver.observe(this._cl_viewElement, {subtree:true, attributes:true, childList:true});
 				else
 					asyncCall = this.cycle(checkUpdated, null, .2, 200);
 				if (typeof value == 'string') {
@@ -408,10 +410,6 @@ a5.Package('a5.cl')
 			} else {
 				this.htmlUpdated(false);
 			}
-			
-			//if auto width/height, set back to auto
-			if(autoWidth) node.style.width = 'auto';
-			if(autoHeight) node.style.height = 'auto';
 		}
 		
 		proto.dealloc = function(){

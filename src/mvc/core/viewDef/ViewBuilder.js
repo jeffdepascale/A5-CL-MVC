@@ -219,7 +219,7 @@ a5.Package('a5.cl.core.viewDef')
 				view = this._cl_view;
 			if(!(view instanceof a5.cl.CLViewContainer) || !view._cl_fromViewDef)
 				return;
-			var childViews = view._cl_childViews.slice(0),
+			var childViews = view._cl_childViewTarget._cl_childViews.slice(0),
 				x, y, thisChild;
 			for(x = 0, y = childViews.length; x < y; x++){
 				thisChild = childViews[x];
