@@ -29,6 +29,8 @@ a5.Package('a5.cl')
 			this._cl_id = null;
 			this._cl_viewIsInTree = false;
 			this._cl_viewAddedToTreePending = false;
+			this._cl_viewDefIsGenerating = false;
+			this._cl_pendingRender = null;
 		});
 		
 		/**#@+
@@ -94,6 +96,7 @@ a5.Package('a5.cl')
 				if(typeof callback === 'function')
 					callback.call(scope, this._cl_view);
 			} else {
+				this._cl_viewDefIsGenerating = true;
 				var isXML = /<.+>/.test(this._cl_defaultViewDef);
 				if(isXML){
 					this._cl_buildViewDef(this._cl_defaultViewDef, callback, scope);
@@ -156,10 +159,14 @@ a5.Package('a5.cl')
 			var callback = typeof view === 'function' ? view : callback,
 				target;
 			
-			this.generateView(function(rootView){
-				target = this._cl_renderTarget || rootView;
-				this._cl_finalizeRender(target, view, callback);
-			}, this);
+			if (this._cl_viewDefIsGenerating) {
+				this._cl_pendingRender = [view, callback];
+			} else {
+				this.generateView(function(rootView){
+					target = this._cl_renderTarget || rootView;
+					this._cl_finalizeRender(target, view, callback);
+				}, this);
+			}
 		}
 		
 		proto._cl_finalizeRender = function(target, view, callback){
@@ -293,9 +300,14 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_viewDefComplete = function(view){
+			this._cl_viewDefIsGenerating = false;
 			if (this._cl_viewDefCallback)
 				this._cl_viewDefCallback.call(this._cl_viewDefCallbackScope, view);
 			this._cl_viewReady();
+			if(this._cl_pendingRender){
+				this.render.apply(this, this._cl_pendingRender);
+				this._cl_pendingRender = null;
+			}
 		}
 		
 		proto._cl_viewReady = function(){
