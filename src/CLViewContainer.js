@@ -6,8 +6,7 @@
  */
 a5.Package('a5.cl')
 	.Extends('CLView')
-	.Import('a5.ContractAttribute',
-			'a5.cl.mvc.CLViewContainerEvent')
+	.Import('a5.cl.mvc.CLViewContainerEvent')
 	.Static(function(CLViewContainer){
 		CLViewContainer.redrawLog = {};
 		
@@ -420,12 +419,9 @@ a5.Package('a5.cl')
 		 * @param {a5.cl.CLView|Object} view
 		 * @param {Function} [callback]
 		 */
-		proto.addSubView = this.Attributes(
-			["Contract", {view:'a5.cl.CLView', callback:'function=null'}],
-			function(args){
-				if (args)
-					this._cl_childViewTarget._cl_addChildView(args.view, null, args.callback)
-		})
+		proto.addSubView = function(view, callback){
+			this._cl_childViewTarget._cl_addChildView(view, null, callback)
+		}
 		
 		/**
 		 * @function
@@ -652,8 +648,8 @@ a5.Package('a5.cl')
 		
 		proto.Override._cl_addedToTree = function(){
 			proto.superclass()._cl_addedToTree.call(this);
-			for(var i=0; i<this.subViewCount(); i++)
-				this.subViewAtIndex(i)._cl_addedToTree();
+			for(var x = 0, y = this._cl_childViews.length; x < y; x++)
+				this._cl_childViews[x]._cl_addedToTree();
 		}
 		
 		proto.Override._cl_removedFromTree = function(){
