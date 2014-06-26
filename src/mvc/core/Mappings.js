@@ -79,10 +79,11 @@ a5.Package('a5.cl.mvc.core')
 				}
 		}
 		
-		this.getCallSignature = function(hashArray){
+		this.getCallSignature = function(hashArray, fullHash){
 			var matchedSig = matchSignature(hashArray);
 			if (matchedSig) {
 				matchedSig.hash = hashArray.join('/');
+				matchedSig.fullHash = fullHash;
 				lastMapping = matchedSig;
 				return matchedSig;
 			} else return null; 

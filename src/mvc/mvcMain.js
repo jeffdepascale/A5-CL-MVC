@@ -232,7 +232,7 @@ a5.Package('a5.cl.mvc')
 		}	
 		
 		var eHashChangeHandler = function(e){
-			_locationManager.processMapping(e.data().hashArray);
+			_locationManager.processMapping(e.data().hashArray, e.data().fullHash);
 		}
 		
 		cls.Override.initializeAddOn = function(){

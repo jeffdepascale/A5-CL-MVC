@@ -64,10 +64,10 @@ a5.Package('a5.cl.mvc.core')
 			}
 		}
 		
-		this.processMapping = function(param){
+		this.processMapping = function(param, fullHash){
 			var lastSig = mappings.geLastCallSignature();
 			if (Object.prototype.toString.call(param) === '[object Array]') {
-				var callSig = mappings.getCallSignature(param);
+				var callSig = mappings.getCallSignature(param, fullHash);
 				if (callSig) {
 					filters.test(callSig, lastSig, function(valid){
 						if (valid) {
@@ -86,7 +86,8 @@ a5.Package('a5.cl.mvc.core')
 						self.dispatchEvent('CONTROLLER_CHANGE', {
 							controller: param.controller,
 							action: param.action,
-							id: param.id
+							id: param.id,
+							fullHash:fullHash
 						});
 					}
 				})

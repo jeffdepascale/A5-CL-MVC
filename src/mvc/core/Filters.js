@@ -112,6 +112,7 @@ a5.Package("a5.cl.mvc.core")
 						callback(false);
 					},
 					hash:sig.hash,
+					fullHash:sig.fullHash,
 					controller:sig.controller,
 					action:sig.action,
 					id:sig.id
